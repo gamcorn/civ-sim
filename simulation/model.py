@@ -1,0 +1,180 @@
+from __future__ import annotations
+import asyncio
+import random as stdlib_random
+
+import mesa
+
+from config import SimConfig
+from world.grid import ResourceGrid
+from world.events import EventSampler
+from agents.civilization import Civilization, CulturalTraits
+from agents.city import CityAgent
+from technology.discovery import TechEngine
+from storage.logger import EventLogger
+
+
+class CivModel(mesa.Model):
+    """Top-level Mesa model: owns the world, all agents, and the event log."""
+
+    def __init__(self, config: SimConfig):
+        super().__init__(rng=config.rng_seed)
+        self.config = config
+
+        # World
+        self.grid = ResourceGrid(config.width, config.height, config, self.random)
+
+        # Civilizations
+        self.civilizations: list[Civilization] = self._create_civs()
+
+        # Place cities on the grid
+        self._place_cities()
+
+        # Sub-systems
+        self.event_sampler = EventSampler(config, self.random)
+        self.tech_engine = TechEngine()
+        self.logger = EventLogger(config.db_path, config.rng_seed, config.db_flush_interval)
+
+        # Climate-shift counter (ticks remaining with reduced food regen)
+        self._climate_penalty_ticks: int = 0
+
+        # History for visualization
+        self.history: dict[str, list] = {
+            "tick": [],
+            "pop_0": [],
+            "pop_1": [],
+            "mil_0": [],
+            "mil_1": [],
+        }
+
+    # ------------------------------------------------------------------
+
+    def step(self) -> None:
+        # 1. Resource regeneration
+        self.grid.step()
+
+        # 2. Environmental events
+        events = self.event_sampler.sample(self.grid)
+        if any(e.name == "climate_shift" for e in events):
+            self._climate_penalty_ticks = 20
+
+        if self._climate_penalty_ticks > 0:
+            # Temporarily suppress food regen via a one-tick multiplier
+            self.grid.layers[
+                __import__("world.resources", fromlist=["ResourceType"]).ResourceType.FOOD
+            ].data *= 0.85
+            self._climate_penalty_ticks -= 1
+
+        # 3. Dispatch all decisions (LLM async batch, rule-based sync)
+        asyncio.run(self._dispatch_decisions())
+
+        # 4. Activate all city agents in random order (reads _pending_action)
+        self.agents.shuffle_do("step")
+
+        # 5. Update civilization aggregates
+        from agents.city import CityAgent as _CA
+        for civ in self.civilizations:
+            cities = [a for a in self.agents if isinstance(a, _CA) and a.civ is civ]
+            civ.update_aggregates(cities)
+
+        # 6. Log each city's state
+        env_tag = ",".join(e.name for e in events) if events else ""
+        from agents.city import CityAgent as _CA2
+        for agent in list(self.agents):
+            if isinstance(agent, _CA2):
+                self.logger.log_event(
+                    tick=self.steps,
+                    agent_id=str(agent.unique_id),
+                    civ_id=agent.civ.civ_id,
+                    action=agent.last_action,
+                    pop=agent.population,
+                    military=agent.military,
+                    tech_level=agent.civ.tech_level,
+                    territory=self.grid.territory_count(agent.civ.civ_id),
+                    env_event=env_tag,
+                )
+
+        # 7. Record history snapshot
+        self.history["tick"].append(self.steps)
+        for i, civ in enumerate(self.civilizations):
+            self.history[f"pop_{i}"].append(civ.total_pop)
+            self.history[f"mil_{i}"].append(civ.total_military)
+
+        # 8. Stop if only one civ remains or max ticks reached
+        alive = [c for c in self.civilizations if c.alive]
+        if len(alive) <= 1 or self.steps >= self.config.max_ticks:
+            self.running = False
+            self.logger.close()
+
+    # ------------------------------------------------------------------
+
+    async def _dispatch_decisions(self) -> None:
+        """Batch all city decisions by provider, run LLM providers concurrently."""
+        from collections import defaultdict
+        from agents.city import CityAgent
+
+        by_provider: dict = defaultdict(list)
+        for agent in self.agents:
+            if isinstance(agent, CityAgent):
+                by_provider[agent.civ.provider].append(agent)
+
+        async def _one_batch(provider, cities):
+            actions = await provider.choose_actions_batch(cities)
+            for city, action in zip(cities, actions):
+                city._pending_action = action
+
+        await asyncio.gather(*[
+            _one_batch(provider, cities)
+            for provider, cities in by_provider.items()
+        ])
+
+    # ------------------------------------------------------------------
+
+    def _create_civs(self) -> list[Civilization]:
+        cfg = self.config
+        rng = self.random
+        civs = []
+        names = ["Alpha", "Beta", "Gamma", "Delta"]
+        for i in range(cfg.num_civs):
+            lo, hi = cfg.trait_range
+            traits = CulturalTraits(
+                aggressiveness=rng.uniform(lo, hi),
+                trust=rng.uniform(lo, hi),
+                innovation=rng.uniform(lo, hi),
+                tribalism=rng.uniform(lo, hi),
+                risk_tolerance=rng.uniform(lo, hi),
+            )
+            from agents.providers.factory import create_provider
+            provider_cfg = (
+                cfg.civ_providers[i]
+                if i < len(cfg.civ_providers)
+                else cfg.civ_providers[0]
+            )
+            provider = create_provider(provider_cfg)
+            civs.append(Civilization(civ_id=i, name=names[i], traits=traits, provider=provider))
+        return civs
+
+    def _place_cities(self) -> None:
+        cfg = self.config
+        rng = self.random
+        # Split the grid into vertical halves, one per civ
+        half = cfg.width // 2
+        regions = [
+            (0, half - 5),
+            (half + 5, cfg.width - 1),
+        ]
+        for i, civ in enumerate(self.civilizations):
+            x_min, x_max = regions[i % len(regions)]
+            for _ in range(cfg.cities_per_civ):
+                for _attempt in range(50):
+                    x = rng.randint(x_min, x_max)
+                    y = rng.randint(5, cfg.height - 5)
+                    # Avoid placing two cities too close together
+                    from agents.city import CityAgent as _CA
+                    too_close = any(
+                        abs(a.x - x) + abs(a.y - y) < 8
+                        for a in self.agents
+                        if isinstance(a, _CA)
+                    )
+                    if not too_close:
+                        CityAgent(self, civ, x, y)
+                        break
