@@ -18,7 +18,13 @@ class AnthropicProvider(DecisionProvider):
 
     def __init__(self, config: "ProviderConfig"):
         self._config = config
-        self._client = anthropic.AsyncAnthropic(api_key=config.api_key)
+        # base_url is passed through so Claude-compatible proxies work.
+        # If using provider=anthropic with the default localhost URL, calls will
+        # fail immediately and the per-city fallback will kick in.
+        self._client = anthropic.AsyncAnthropic(
+            api_key=config.api_key,
+            base_url=config.base_url,
+        )
 
     async def choose_actions_batch(self, cities: list["CityAgent"]) -> list[str]:
         tasks = [self._call_one(city) for city in cities]

@@ -70,6 +70,10 @@ def main():
             base_url=args.base_url,
             api_key=args.api_key,
         )
+        if args.provider == "anthropic" and "llama" in args.model.lower():
+            print(f"[warn] Using provider=anthropic with model={args.model!r} — "
+                  f"this looks like a local model. Did you mean to use --provider openai_compatible?",
+                  file=sys.stderr)
         cfg.civ_providers = [provider_cfg] * cfg.num_civs
 
     if args.sweep:

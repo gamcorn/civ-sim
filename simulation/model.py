@@ -125,12 +125,15 @@ class CivModel(mesa.Model):
         await asyncio.gather(*[
             _one_batch(provider, cities)
             for provider, cities in by_provider.items()
-        ])
+        ], return_exceptions=True)
 
     # ------------------------------------------------------------------
 
     def _create_civs(self) -> list[Civilization]:
         cfg = self.config
+        if not cfg.civ_providers:
+            from config import ProviderConfig
+            cfg.civ_providers = [ProviderConfig()]
         rng = self.random
         civs = []
         names = ["Alpha", "Beta", "Gamma", "Delta"]
