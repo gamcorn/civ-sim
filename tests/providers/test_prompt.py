@@ -39,3 +39,39 @@ def test_sim_config_has_civ_providers():
     cfg = SimConfig()
     assert len(cfg.civ_providers) == 2
     assert all(isinstance(p, ProviderConfig) for p in cfg.civ_providers)
+
+
+def test_build_prompt_contains_turn_and_civ_name():
+    from agents.providers.prompt import build_prompt
+    city = make_mock_city(tick=42, civ_name="Alpha")
+    prompt = build_prompt(city, ["gather", "expand"])
+    assert "Turn 42" in prompt
+    assert "Alpha" in prompt
+
+
+def test_build_prompt_contains_feasible_actions():
+    from agents.providers.prompt import build_prompt
+    city = make_mock_city()
+    prompt = build_prompt(city, ["gather", "research"])
+    assert "gather" in prompt
+    assert "research" in prompt
+
+
+def test_parse_response_returns_valid_action():
+    from agents.providers.prompt import parse_response
+    assert parse_response("expand\n", ["gather", "expand"], "gather") == "expand"
+
+
+def test_parse_response_falls_back_on_garbage():
+    from agents.providers.prompt import parse_response
+    assert parse_response("I cannot decide!", ["gather", "expand"], "gather") == "gather"
+
+
+def test_parse_response_falls_back_on_empty():
+    from agents.providers.prompt import parse_response
+    assert parse_response("", ["gather"], "gather") == "gather"
+
+
+def test_parse_response_strips_punctuation():
+    from agents.providers.prompt import parse_response
+    assert parse_response("expand.", ["gather", "expand"], "gather") == "expand"
