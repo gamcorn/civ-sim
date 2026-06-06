@@ -111,4 +111,10 @@ def mini_config():
 
 @pytest.fixture
 def mini_model(mini_config):
-    return CivModel(mini_config)
+    model = CivModel(mini_config)
+    yield model
+    if hasattr(model, "logger") and model.logger:
+        try:
+            model.logger.close()
+        except Exception:
+            pass
