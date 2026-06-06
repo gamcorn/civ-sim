@@ -37,7 +37,7 @@ _CITY_GLYPHS: dict[int, tuple[str, str]] = {
     0: ("◦", "●"),  # (small, large)
     1: ("◇", "◆"),
 }
-_CITY_THRESHOLD = 100.0
+_CITY_THRESHOLD: float = 100.0
 
 
 def _city_char(civ_id: int, population: float) -> str:

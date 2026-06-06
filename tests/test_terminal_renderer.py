@@ -1,4 +1,4 @@
-from visualization.terminal_renderer import _tile_char
+from visualization.terminal_renderer import _tile_char, _city_char
 
 
 def test_tile_char_empty():
@@ -41,15 +41,12 @@ def test_tile_char_overshoot():
     assert _tile_char(150.0, 100.0) == "█"
 
 
-from visualization.terminal_renderer import _city_char
-
-
 def test_city_char_civ0_small():
     assert _city_char(0, 50.0) == "◦"
 
 
 def test_city_char_civ0_large():
-    assert _city_char(0, 100.0) == "●"
+    assert _city_char(0, 150.0) == "●"
 
 
 def test_city_char_civ0_exactly_threshold():
