@@ -131,13 +131,16 @@ class TerminalRenderer:
         lines.append("")
 
         # ── Map ───────────────────────────────────────────────────────────
+        from world.resources import ResourceType
         ownership = np.array(model.grid.ownership)
+        food = model.grid.layers[ResourceType.FOOD].data   # (W, H) float array
+        max_r = float(model.config.resource_max)
 
-        # Index city positions for O(1) lookup
-        city_civ_at: dict[tuple[int, int], int] = {}
+        # Index city positions for O(1) lookup — stores (civ_id, population)
+        city_at: dict[tuple[int, int], tuple[int, float]] = {}
         for a in model.agents:
             if isinstance(a, CityAgent):
-                city_civ_at[(a.x, a.y)] = a.civ.civ_id
+                city_at[(a.x, a.y)] = (a.civ.civ_id, a.population)
 
         for row in range(self.map_rows):
             chars: list[str] = []
@@ -147,22 +150,27 @@ class TerminalRenderer:
                 gy = min(row * self.scale_y + self.scale_y // 2, model.config.height - 1)
 
                 # Check whether any city falls in this block
-                city_civ: int | None = None
+                city_info: tuple[int, float] | None = None
                 for dy in range(self.scale_y):
                     for dx in range(self.scale_x):
                         cx = col * self.scale_x + dx
                         cy = row * self.scale_y + dy
-                        if (cx, cy) in city_civ_at:
-                            city_civ = city_civ_at[(cx, cy)]
+                        if (cx, cy) in city_at:
+                            city_info = city_at[(cx, cy)]
                             break
-                    if city_civ is not None:
+                    if city_info is not None:
                         break
 
                 owner = int(ownership[gx, gy])
-                if city_civ is not None:
-                    chars.append(f"{_BRITE[city_civ]}{_BOLD}{_CITY}{_RESET}")
+                if city_info is not None:
+                    city_civ, city_pop = city_info
+                    chars.append(
+                        f"{_BRITE[city_civ]}{_BOLD}{_city_char(city_civ, city_pop)}{_RESET}"
+                    )
                 else:
-                    chars.append(f"{_FG[owner]}{_TILE[owner]}{_RESET}")
+                    chars.append(
+                        f"{_FG[owner]}{_tile_char(food[gx, gy], max_r)}{_RESET}"
+                    )
 
             lines.append("".join(chars))
 
