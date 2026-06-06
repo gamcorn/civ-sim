@@ -64,8 +64,9 @@ def run_sweep(n_runs: int, base_config: SimConfig, output_db: str,
     """
     import duckdb
 
+    effective_workers = num_workers or getattr(base_config, "num_sweep_workers", 0)
     ray.init(ignore_reinit_error=True,
-             num_cpus=num_workers if num_workers > 0 else None)
+             num_cpus=effective_workers if effective_workers > 0 else None)
 
     remote_worker = ray.remote(num_cpus=1)(_sweep_worker)
 
@@ -96,6 +97,11 @@ def run_sweep(n_runs: int, base_config: SimConfig, output_db: str,
 
     while remaining:
         done, remaining = ray.wait(remaining, num_returns=1, timeout=60.0)
+        if not done:
+            errors += 1
+            print(f"\n  [warn] worker timed out after 60 s; skipping")
+            remaining = remaining[1:]
+            continue
         for ref in done:
             try:
                 r = ray.get(ref)
