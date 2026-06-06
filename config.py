@@ -10,6 +10,10 @@ class ProviderConfig:
     temperature: float = 0.2
     max_tokens: int = 10
     timeout: float = 5.0
+    # DGX Spark batching
+    use_completions_api: bool = False  # send all prompts in one /v1/completions call
+    max_concurrent: int = 64           # semaphore cap when chat API is used
+    prompt_template: str = ""          # chat template; empty = Llama-3.1 default
 
 
 @dataclass
@@ -58,3 +62,6 @@ class SimConfig:
     civ_providers: list = field(
         default_factory=lambda: [ProviderConfig(), ProviderConfig()]
     )
+    # DGX Spark sweep / grid
+    num_sweep_workers: int = 0   # Ray workers; 0 = auto (one per CPU core)
+    grid_backend: str = "numpy"  # "numpy" | "cupy"
