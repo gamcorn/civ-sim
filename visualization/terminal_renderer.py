@@ -33,6 +33,19 @@ def _tile_char(food: float, max_food: float) -> str:
     return _GRADIENT[idx]
 
 
+_CITY_GLYPHS: dict[int, tuple[str, str]] = {
+    0: ("◦", "●"),  # (small, large)
+    1: ("◇", "◆"),
+}
+_CITY_THRESHOLD = 100.0
+
+
+def _city_char(civ_id: int, population: float) -> str:
+    """Return a glyph for a city: shape encodes civ, size encodes population."""
+    small, large = _CITY_GLYPHS.get(civ_id, _CITY_GLYPHS[0])
+    return large if population >= _CITY_THRESHOLD else small
+
+
 # Characters used in the map
 _TILE  = {-1: "·",  0: "░",  1: "░"}
 _CITY  = "@"

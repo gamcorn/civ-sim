@@ -39,3 +39,33 @@ def test_tile_char_zero_max():
 def test_tile_char_overshoot():
     # food > max_food — min(..., 4) guard ensures "█" not IndexError
     assert _tile_char(150.0, 100.0) == "█"
+
+
+from visualization.terminal_renderer import _city_char
+
+
+def test_city_char_civ0_small():
+    assert _city_char(0, 50.0) == "◦"
+
+
+def test_city_char_civ0_large():
+    assert _city_char(0, 100.0) == "●"
+
+
+def test_city_char_civ0_exactly_threshold():
+    # population == 100 is "large"
+    assert _city_char(0, 100.0) == "●"
+
+
+def test_city_char_civ1_small():
+    assert _city_char(1, 0.0) == "◇"
+
+
+def test_city_char_civ1_large():
+    assert _city_char(1, 200.0) == "◆"
+
+
+def test_city_char_unknown_civ():
+    # Falls back to civ-0 glyphs — must not raise
+    result = _city_char(99, 50.0)
+    assert isinstance(result, str) and len(result) == 1
