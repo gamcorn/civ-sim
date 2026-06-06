@@ -46,8 +46,6 @@ def _city_char(civ_id: int, population: float) -> str:
     return large if population >= _CITY_THRESHOLD else small
 
 
-
-
 def _bar(value: float, maximum: float, width: int = 10, char: str = "█") -> str:
     filled = int(round(width * max(0.0, min(value, maximum)) / max(maximum, 1)))
     return char * filled + "░" * (width - filled)
@@ -174,14 +172,14 @@ class TerminalRenderer:
         # ── Legend ────────────────────────────────────────────────────────
         lines.append("")
         civ_legend = "   ".join(
-            f"{_FG[c.civ_id]}▒{_RESET} "
+            f"{_FG[c.civ_id]}█{_RESET} "
             f"{_BRITE[c.civ_id]}{_city_char(c.civ_id, 50)}{_RESET}/"
             f"{_BRITE[c.civ_id]}{_city_char(c.civ_id, 150)}{_RESET} {c.name}"
             for c in model.civilizations
         )
         lines.append(
-            f"  {_FG[-1]}▒{_RESET} unclaimed   {civ_legend}"
-            f"   gradient: ·░▒▓█=food"
+            f"  {_FG[-1]}█{_RESET} unclaimed   {civ_legend}"
+            f"   tile shade: ·░▒▓█=food"
         )
 
         # ── Population sparklines ─────────────────────────────────────────
