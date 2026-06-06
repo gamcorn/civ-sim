@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import MagicMock
 import numpy as np
+from config import SimConfig
+from simulation.model import CivModel
 
 
 def make_mock_city(
@@ -91,3 +93,22 @@ def make_mock_city(
 @pytest.fixture
 def mock_city():
     return make_mock_city()
+
+
+@pytest.fixture
+def mini_config():
+    return SimConfig(
+        width=20,
+        height=20,
+        num_civs=2,
+        cities_per_civ=1,
+        max_ticks=5,
+        rng_seed=0,
+        db_path=":memory:",
+        visualize=False,
+    )
+
+
+@pytest.fixture
+def mini_model(mini_config):
+    return CivModel(mini_config)
