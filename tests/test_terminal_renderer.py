@@ -66,3 +66,23 @@ def test_city_char_unknown_civ():
     # Falls back to civ-0 glyphs — must not raise
     result = _city_char(99, 50.0)
     assert isinstance(result, str) and len(result) == 1
+
+
+def test_terminal_renderer_update_no_crash():
+    """update() must not raise on a real model tick."""
+    import io
+    import sys
+    from unittest.mock import patch
+
+    from config import SimConfig
+    from simulation.model import CivModel
+    from visualization.terminal_renderer import TerminalRenderer
+
+    cfg = SimConfig(width=20, height=15, cities_per_civ=1, max_ticks=2, visualize=False)
+    model = CivModel(cfg)
+    captured = io.StringIO()
+    with patch("sys.stdout", captured):
+        renderer = TerminalRenderer(model)
+        model.step()
+        renderer.update(model)
+    # Any output to stdout is acceptable; just no exception

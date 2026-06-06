@@ -133,7 +133,7 @@ class TerminalRenderer:
         # ── Map ───────────────────────────────────────────────────────────
         from world.resources import ResourceType
         ownership = np.array(model.grid.ownership)
-        food = model.grid.layers[ResourceType.FOOD].data   # (W, H) float array
+        food = np.asarray(model.grid.layers[ResourceType.FOOD].data)  # host copy, works for both numpy and cupy
         max_r = float(model.config.resource_max)
 
         # Index city positions for O(1) lookup — stores (civ_id, population)
