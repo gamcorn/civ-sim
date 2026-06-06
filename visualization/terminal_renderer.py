@@ -46,9 +46,6 @@ def _city_char(civ_id: int, population: float) -> str:
     return large if population >= _CITY_THRESHOLD else small
 
 
-# Characters used in the map
-_TILE  = {-1: "·",  0: "░",  1: "░"}
-_CITY  = "@"
 
 
 def _bar(value: float, maximum: float, width: int = 10, char: str = "█") -> str:
@@ -177,11 +174,14 @@ class TerminalRenderer:
         # ── Legend ────────────────────────────────────────────────────────
         lines.append("")
         civ_legend = "   ".join(
-            f"{_FG[c.civ_id]}{_TILE[c.civ_id]}{_RESET}/{_BRITE[c.civ_id]}{_CITY}{_RESET} {c.name}"
+            f"{_FG[c.civ_id]}▒{_RESET} "
+            f"{_BRITE[c.civ_id]}{_city_char(c.civ_id, 50)}{_RESET}/"
+            f"{_BRITE[c.civ_id]}{_city_char(c.civ_id, 150)}{_RESET} {c.name}"
             for c in model.civilizations
         )
         lines.append(
-            f"  {_FG[-1]}{_TILE[-1]}{_RESET} unclaimed   {civ_legend}"
+            f"  {_FG[-1]}▒{_RESET} unclaimed   {civ_legend}"
+            f"   gradient: ·░▒▓█=food"
         )
 
         # ── Population sparklines ─────────────────────────────────────────
