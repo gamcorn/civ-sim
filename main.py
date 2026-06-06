@@ -34,6 +34,19 @@ def parse_args() -> argparse.Namespace:
                    help="API key (use EMPTY for local vLLM/Ollama)")
     p.add_argument("--config",    type=str, default=None,
                    help="YAML file with per-civ provider config")
+    # DGX Spark optimisation flags
+    p.add_argument("--batch-mode",       action="store_true",
+                   help="Use /v1/completions batch API (vLLM DGX mode)")
+    p.add_argument("--max-concurrent",   type=int, default=64,
+                   help="Max concurrent LLM requests when batch-mode is off")
+    p.add_argument("--prompt-template",  type=str, default="",
+                   help="Chat template for completions API; empty = Llama-3.1 default. "
+                        "Use {system} and {user} placeholders.")
+    p.add_argument("--workers",          type=int, default=0,
+                   help="Ray workers for sweep (0 = one per CPU core)")
+    p.add_argument("--grid-backend",     type=str, default="numpy",
+                   choices=["numpy", "cupy"],
+                   help="Array backend for resource grid")
     p.add_argument("--sweep",        action="store_true")
     p.add_argument("--n-runs",       type=int, default=100)
     p.add_argument("--output",       type=str, default="sweep.duckdb")
@@ -51,6 +64,8 @@ def main():
         cities_per_civ=args.cities,
         db_path=args.db,
         visualize=not args.no_visualize,
+        num_sweep_workers=args.workers,
+        grid_backend=args.grid_backend,
     )
 
     from config import ProviderConfig
@@ -69,6 +84,9 @@ def main():
             model=args.model,
             base_url=args.base_url,
             api_key=args.api_key,
+            use_completions_api=args.batch_mode,
+            max_concurrent=args.max_concurrent,
+            prompt_template=args.prompt_template,
         )
         if args.provider == "anthropic" and "llama" in args.model.lower():
             print(f"[warn] Using provider=anthropic with model={args.model!r} — "
@@ -79,7 +97,7 @@ def main():
     if args.sweep:
         from simulation.runner import run_sweep
         print(f"Starting sweep: {args.n_runs} runs → {args.output}")
-        run_sweep(args.n_runs, cfg, args.output)
+        run_sweep(args.n_runs, cfg, args.output, num_workers=args.workers)
         return
 
     # Single run
