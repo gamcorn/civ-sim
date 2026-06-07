@@ -71,6 +71,9 @@ class CivModel(mesa.Model):
             ].data *= 0.85
             self._climate_penalty_ticks -= 1
 
+        if any(e.name == "disease" for e in events):
+            self._apply_disease()
+
         # 3. Dispatch all decisions (LLM async batch, rule-based sync)
         asyncio.run(self._dispatch_decisions())
 
@@ -144,6 +147,15 @@ class CivModel(mesa.Model):
         ], return_exceptions=True)
 
     # ------------------------------------------------------------------
+
+    def _apply_disease(self) -> None:
+        """Apply epidemic: each city loses ~20% population (5× starvation rate)."""
+        import math
+        from agents.city import CityAgent as _CA
+        for agent in list(self.agents):
+            if isinstance(agent, _CA):
+                hit = math.ceil(agent.population * self.config.pop_starvation_rate * 5)
+                agent.population = max(1, agent.population - hit)
 
     def _create_civs(self) -> list[Civilization]:
         cfg = self.config
