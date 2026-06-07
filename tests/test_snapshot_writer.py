@@ -83,6 +83,50 @@ def test_writer_inserts_row():
             os.unlink(db_path)
 
 
+def test_writer_multiple_rows():
+    with tempfile.NamedTemporaryFile(suffix=".duckdb", delete=False) as f:
+        db_path = f.name
+    try:
+        os.unlink(db_path)
+        writer = SnapshotWriter(db_path, seed=9)
+        grid = _make_mock_grid()
+        for tick in (10, 20, 30):
+            writer.write(tick=tick, grid=grid, agents=[], civilizations=[])
+        writer.close()
+
+        con = duckdb.connect(db_path)
+        ticks = [r[0] for r in con.execute(
+            "SELECT tick FROM snapshots ORDER BY tick"
+        ).fetchall()]
+        con.close()
+        assert ticks == [10, 20, 30]
+    finally:
+        if os.path.exists(db_path):
+            os.unlink(db_path)
+
+
+def test_writer_serialises_ownership_blob():
+    with tempfile.NamedTemporaryFile(suffix=".duckdb", delete=False) as f:
+        db_path = f.name
+    try:
+        os.unlink(db_path)
+        writer = SnapshotWriter(db_path, seed=2)
+        grid = _make_mock_grid()
+        grid.ownership[0, 0] = 1   # mark one tile as civ 1
+        writer.write(tick=1, grid=grid, agents=[], civilizations=[])
+        writer.close()
+
+        con = duckdb.connect(db_path)
+        row = con.execute("SELECT ownership, width, height FROM snapshots").fetchone()
+        ownership = np.frombuffer(row[0], dtype=np.int8).reshape(row[1], row[2])
+        assert ownership[0, 0] == 1
+        assert ownership[1, 1] == 0
+        con.close()
+    finally:
+        if os.path.exists(db_path):
+            os.unlink(db_path)
+
+
 def test_writer_serialises_food_blob():
     with tempfile.NamedTemporaryFile(suffix=".duckdb", delete=False) as f:
         db_path = f.name

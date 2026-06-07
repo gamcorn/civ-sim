@@ -75,3 +75,19 @@ def test_apply_key_quit():
     state = {"idx": 0, "paused": False, "speed": 1.0, "quit": False}
     _apply_key("q", state, 5)
     assert state["quit"] is True
+
+
+def test_nearest_idx_empty_list():
+    assert _nearest_idx([], 42) == 0
+
+
+def test_apply_key_equals_alias_for_plus():
+    state = {"idx": 0, "paused": False, "speed": 1.0, "quit": False}
+    _apply_key("=", state, 3)
+    assert state["speed"] == 2.0
+
+
+def test_apply_key_unknown_key_is_noop():
+    state = {"idx": 5, "paused": True, "speed": 2.0, "quit": False}
+    _apply_key("x", state, 10)
+    assert state == {"idx": 5, "paused": True, "speed": 2.0, "quit": False}

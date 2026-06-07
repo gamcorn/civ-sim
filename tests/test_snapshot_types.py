@@ -36,6 +36,28 @@ def test_grid_state_fields():
     assert gs.layers[ResourceType.FOOD].data[0, 0] == 50.0
 
 
+def test_grid_state_territory_count_unclaimed():
+    ownership = np.full((4, 4), -1, dtype=np.int8)
+    gs = GridState(ownership=ownership, layers={})
+    assert gs.territory_count(-1) == 16
+    assert gs.territory_count(0) == 0
+
+
+def test_grid_state_territory_count_civ():
+    ownership = np.zeros((4, 4), dtype=np.int8)
+    ownership[0, :] = 1  # top row belongs to civ 1
+    gs = GridState(ownership=ownership, layers={})
+    assert gs.territory_count(0) == 12
+    assert gs.territory_count(1) == 4
+    assert gs.territory_count(-1) == 0
+
+
+def test_grid_state_territory_count_empty_grid():
+    ownership = np.zeros((0, 0), dtype=np.int8)
+    gs = GridState(ownership=ownership, layers={})
+    assert gs.territory_count(0) == 0
+
+
 def test_replay_frame_duck_types_model():
     """ReplayFrame has all attributes renderers read off a CivModel."""
     civ = CivState(civ_id=0, name="Alpha", alive=True, discovered_techs=[])
