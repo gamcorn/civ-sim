@@ -232,6 +232,41 @@ duckdb run.duckdb "SELECT tick, width, height FROM snapshots ORDER BY tick"
 
 ---
 
+## Simulation Dynamics
+
+Several mechanics keep the simulation in motion across long runs (1000–5000 ticks) rather than settling into a frozen partition.
+
+### Environmental events
+
+Events are sampled each tick and applied before city decisions:
+
+| Event | Probability/tick | Effect |
+|---|---|---|
+| Drought | 4% | Halves food in a random 10×10 patch |
+| Disease | 2.5% | Every city loses ~20% population instantly |
+| Mineral boom | 0.4% | Triples minerals in a random 6×6 patch |
+| Climate shift | 0.2% | Suppresses global food regeneration for 20 ticks |
+
+Disease was previously a silent no-op (events logged but never applied). It now causes real population loss, which reduces military via attrition and opens attack windows.
+
+### Military attrition
+
+Cities with more than 50 military units lose `int(military × 2%)` units per tick, regardless of action. This prevents indefinite arms parity — a civilization that stops fortifying will bleed out over hundreds of ticks, giving rivals a window to attack. Cities below 50 military are exempt from decay so early-game expansion is not disrupted.
+
+### Border tile reversion
+
+Each tick, tiles on the contested border between two civilizations have a 2% chance of reverting to unclaimed. This keeps the `expand` action viable across the full run (not just the early land-grab) and creates ongoing territorial flux at contact lines even without direct combat.
+
+City home tiles are protected from reversion — a city can never lose its own founding tile this way.
+
+### Combat
+
+Attack is feasible when an enemy city is within **25 Manhattan tiles** and the attacker has at least 5 military. The scoring engine favors attack when `civ_total_military > enemy_total_military × 0.8` — any slight edge is enough. Trade is feasible within **30 tiles**.
+
+Victories capture territory around the defeated city; defeats cost the attacker 25% of its military. Either outcome shifts the balance for subsequent turns.
+
+---
+
 ## Parameter Sweep
 
 Run many seeds in parallel with Ray and collect results into a single DuckDB file:
@@ -306,7 +341,7 @@ python main.py --sweep --n-runs 10000 --output dgx_sweep.duckdb \
 python -m pytest tests/ -v
 ```
 
-All 195 tests should pass. The suite covers the grid, events, logger, civilization state, decision engine, city actions and lifecycle, tech tree, all three LLM providers (mocked), provider factory, model dispatch loop, batch completions path, Ray sweep runner, grid backend abstraction, snapshot writer/reader round-trips, CivModel snapshot integration, and replay player helpers and renderer duck-typing.
+All 202 tests should pass. The suite covers the grid, events, logger, civilization state, decision engine, city actions and lifecycle, tech tree, all three LLM providers (mocked), provider factory, model dispatch loop, batch completions path, Ray sweep runner, grid backend abstraction, snapshot writer/reader round-trips, CivModel snapshot integration, and replay player helpers and renderer duck-typing.
 
 ---
 

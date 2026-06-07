@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
+import os
 import numpy as np
 import matplotlib
+if not os.environ.get("DISPLAY"):
+    os.environ["DISPLAY"] = ":0"
 matplotlib.use("TkAgg")   # non-blocking interactive backend
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
