@@ -63,7 +63,7 @@ python main.py --seed 42 --ticks 500 --no-visualize
 python main.py --seed 42 --ticks 500
 ```
 
-A matplotlib window opens showing territory ownership, food levels, and population/military charts updated each tick.
+A matplotlib window opens with a seven-panel dashboard updated each tick — see [Visualization Dashboard](#visualization-dashboard) for details.
 
 ### Terminal map (SSH / headless)
 
@@ -274,6 +274,55 @@ Attack is feasible when an enemy city is within **25 Manhattan tiles** and the a
 **City capture.** When a defeated city's population falls below 30% of its founding value, it changes hands: the city, its home tile, and all surrounding territory claimed in the assault transfer to the attacker's civilization. Captures appear as `action=capture` events in the DuckDB log and can dramatically shift the balance mid-run.
 
 Victories capture territory around the defeated city; defeats cost the attacker 25% of its military. Either outcome shifts the balance for subsequent turns.
+
+---
+
+## Visualization Dashboard
+
+The live matplotlib window (`python main.py --seed 42 --ticks 500`) renders seven panels simultaneously.
+
+### World map *(left, full height)*
+
+Territory ownership colored by civilization (blue / red / green / purple); brightness encodes local food level — dark tiles are depleted, bright tiles are rich. City markers are scaled by population.
+
+Two overlay rings appear on top of city markers when a city is under stress:
+
+| Ring color | Meaning | Duration |
+|---|---|---|
+| Orange | Hit by the current epidemic | 8 ticks after impact |
+| Yellow | Famine — food stockpile empty | While `food_stock < 0.1` |
+
+### Population *(middle top)*
+
+Per-civilization population over time. Dotted vertical lines mark every epidemic event; line color encodes transmission rate β (green = mild, red = catastrophic), making it easy to correlate population dips with specific outbreaks.
+
+### Military *(middle center)*
+
+Per-civilization total military strength over time. Attrition and combat losses appear as drops; fortify actions appear as recoveries.
+
+### City count *(middle bottom)*
+
+Number of cities per civilization over time. Jumps up on a settle or capture event; drops when a city collapses from starvation or combat.
+
+### Total grid resources *(right top)*
+
+Three lines — food (green), minerals (grey), wood (brown) — summed across the entire map each tick. A sustained downward trend means civilizations are consuming faster than the world regenerates; a floor indicates the regen/consumption equilibrium.
+
+### Food on owned territory *(right center)*
+
+Per-civilization sum of food on all tiles the civilization owns. Unlike the global resource chart this reflects each civ's actual food wealth. Diverging lines indicate one civilization is winning the land and resource competition; a sudden drop can precede a famine-driven war.
+
+### Epidemic log *(right bottom)*
+
+One dot per outbreak at position `(tick, β)`:
+
+| Visual property | Encodes |
+|---|---|
+| Dot size | Lives lost in that outbreak — larger = more deaths |
+| Dot color | β transmission rate — green (mild) → red (catastrophic) |
+| Number above dot | Exact death toll |
+
+Reference lines at β = 1.0 and β = 2.0 divide the chart into mild / severe / catastrophic bands. This panel makes it possible to distinguish a high-β epidemic that hit a small population (small dot, red color) from a moderate-β pandemic that swept a large, dense empire (large dot, yellow color).
 
 ---
 
