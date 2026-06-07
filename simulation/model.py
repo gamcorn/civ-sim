@@ -3,6 +3,7 @@ import asyncio
 import random as stdlib_random
 
 import mesa
+import numpy as np
 
 from config import SimConfig
 from world.grid import ResourceGrid
@@ -19,6 +20,7 @@ class CivModel(mesa.Model):
     def __init__(self, config: SimConfig):
         super().__init__(rng=config.rng_seed)
         self.config = config
+        self._np_rng = np.random.default_rng(config.rng_seed)
 
         # World
         self.grid = ResourceGrid(config.width, config.height, config, self.random)
@@ -59,7 +61,10 @@ class CivModel(mesa.Model):
         # 1. Resource regeneration
         self.grid.step()
 
-        # 2. Environmental events
+        # 2. Border pressure — contested tiles revert to unclaimed
+        self._apply_border_reversion()
+
+        # 3. Environmental events
         events = self.event_sampler.sample(self.grid)
         if any(e.name == "climate_shift" for e in events):
             self._climate_penalty_ticks = 20
@@ -74,13 +79,13 @@ class CivModel(mesa.Model):
         if any(e.name == "disease" for e in events):
             self._apply_disease()
 
-        # 3. Dispatch all decisions (LLM async batch, rule-based sync)
+        # 4. Dispatch all decisions (LLM async batch, rule-based sync)
         asyncio.run(self._dispatch_decisions())
 
-        # 4. Activate all city agents in random order (reads _pending_action)
+        # 5. Activate all city agents in random order (reads _pending_action)
         self.agents.shuffle_do("step")
 
-        # 5. Update civilization aggregates
+        # 6. Update civilization aggregates
         from agents.city import CityAgent as _CA
         for civ in self.civilizations:
             cities = [a for a in self.agents if isinstance(a, _CA) and a.civ is civ]
@@ -156,6 +161,29 @@ class CivModel(mesa.Model):
             if isinstance(agent, _CA):
                 hit = math.ceil(agent.population * self.config.pop_starvation_rate * 5)
                 agent.population = max(1, agent.population - hit)
+
+    def _apply_border_reversion(self) -> None:
+        """Tiles at the border of two civs revert to unclaimed with border_reversion_prob."""
+        ownership = self.grid.ownership
+        prob = self.config.border_reversion_prob
+        # Snapshot ownership so all border detection uses the same pre-tick state
+        snap = ownership.copy()
+        revert_mask = np.zeros(ownership.shape, dtype=bool)
+        rolls = self._np_rng.random(ownership.shape) < prob
+        for civ in self.civilizations:
+            owned = (snap == civ.civ_id)
+            enemy_adj = np.zeros(ownership.shape, dtype=bool)
+            for other in self.civilizations:
+                if other.civ_id == civ.civ_id:
+                    continue
+                e = (snap == other.civ_id)
+                enemy_adj |= (
+                    np.roll(e, 1, axis=0) | np.roll(e, -1, axis=0) |
+                    np.roll(e, 1, axis=1) | np.roll(e, -1, axis=1)
+                )
+            border = owned & enemy_adj
+            revert_mask |= border & rolls
+        ownership[revert_mask] = -1
 
     def _create_civs(self) -> list[Civilization]:
         cfg = self.config

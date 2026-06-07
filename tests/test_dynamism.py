@@ -36,3 +36,18 @@ def test_apply_disease_reduces_all_city_populations(mini_config):
         assert city.population < pops_before[city.unique_id], (
             f"City {city.unique_id} population should have dropped after disease"
         )
+
+
+def test_border_tiles_revert_with_probability_one(mini_config):
+    """With reversion prob=1.0, every tile adjacent to an enemy border reverts to -1."""
+    model = CivModel(mini_config)
+    # Clear ownership and set up a minimal border: civ 0 at (5,5), civ 1 at (6,5)
+    model.grid.ownership[:] = -1
+    model.grid.ownership[5, 5] = 0
+    model.grid.ownership[6, 5] = 1
+
+    model.config.border_reversion_prob = 1.0
+    model._apply_border_reversion()
+
+    assert model.grid.ownership[5, 5] == -1, "Civ-0 border tile should revert"
+    assert model.grid.ownership[6, 5] == -1, "Civ-1 border tile should revert"
