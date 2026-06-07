@@ -64,9 +64,10 @@ def _resource_modifier(action: str, agent: "CityAgent") -> float:
         # Surplus to share when stock is high
         return (stock_ratio - 0.4) * 0.6
     if action == EXPAND:
-        # Capped at 0.5 so expand doesn't permanently dominate all other actions
         pop_pressure = (agent.population - 80) / 100.0
-        return min(0.5, max(0.0, pop_pressure))
+        # Moderate food scarcity (stock_ratio < 0.3) drives land-grab before warfare
+        land_hunger = max(0.0, 0.3 - stock_ratio) * 1.5
+        return min(0.5, max(0.0, pop_pressure + land_hunger))
     if action == FORTIFY:
         # More appealing the more outgunned we are
         civ_mil = max(1, agent.civ.total_military)
@@ -79,12 +80,14 @@ def _resource_modifier(action: str, agent: "CityAgent") -> float:
             return 0.3 * (1.0 - agent.military / 15.0)
         return 0.0
     if action == ATTACK:
-        # Only when we have military advantage
         civ_mil = agent.civ.total_military
         enemy_mil = _enemy_military(agent)
-        if civ_mil > enemy_mil * 0.8:    # was 1.2 — any slight edge is enough
-            return 0.5                    # was 0.3
-        return -0.5   # Penalise suicidal attacks
+        military_mod = 0.5 if civ_mil > enemy_mil * 0.8 else -0.5
+        # Severe food scarcity (stock_ratio < 0.1) → desperation overrides caution
+        desperation = max(0.0, 0.1 - stock_ratio) * 6.0
+        # Enemy tiles encroaching nearby → territorial defense imperative
+        defense = _territorial_threat(agent) * 0.8
+        return military_mod + desperation + defense
     if action == RESEARCH:
         # Need surplus wood + minerals
         return (wood / max_r + min_ratio) * 0.3 - 0.1
@@ -113,8 +116,9 @@ def _feasible(agent: "CityAgent", scores: dict[str, float]) -> dict[str, float]:
     # Fortify: always possible
     feasible[FORTIFY] = scores[FORTIFY]
 
-    # Attack: needs an enemy city within 3 tiles and military advantage > 0.8×
-    if _attack_target(agent) is not None and agent.military >= 5:
+    # Territorial defenders can attack with less military than normal aggressors
+    mil_threshold = 2 if _territorial_threat(agent) > 0.1 else 5
+    if _attack_target(agent) is not None and agent.military >= mil_threshold:
         feasible[ATTACK] = scores[ATTACK]
 
     # Research: needs minimal wood and minerals
@@ -147,6 +151,21 @@ def _has_unclaimed_neighbor(agent: "CityAgent") -> bool:
                 if grid.ownership[nx, ny] == -1:
                     return True
     return False
+
+
+def _territorial_threat(agent: "CityAgent") -> float:
+    """Fraction of tiles within 5 tiles of the city owned by enemies."""
+    grid = agent.model.grid
+    total = enemy = 0
+    for dx in range(-5, 6):
+        for dy in range(-5, 6):
+            nx, ny = agent.x + dx, agent.y + dy
+            if 0 <= nx < grid.width and 0 <= ny < grid.height:
+                total += 1
+                owner = int(grid.ownership[nx, ny])
+                if owner >= 0 and owner != agent.civ.civ_id:
+                    enemy += 1
+    return enemy / max(1, total)
 
 
 def _attack_target(agent: "CityAgent"):
