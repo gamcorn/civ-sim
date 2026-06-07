@@ -61,6 +61,9 @@ class GridState:
     ownership: np.ndarray
     layers: dict  # {ResourceType.FOOD: _LayerProxy}
 
+    def territory_count(self, civ_id: int) -> int:
+        return int((self.ownership == civ_id).sum())
+
 
 @dataclass
 class ReplayFrame:
@@ -145,9 +148,12 @@ class SnapshotReader:
         self._history = self._load_history()
 
     def ticks(self) -> list[int]:
-        return [r[0] for r in self._con.execute(
-            "SELECT tick FROM snapshots ORDER BY tick"
-        ).fetchall()]
+        try:
+            return [r[0] for r in self._con.execute(
+                "SELECT tick FROM snapshots ORDER BY tick"
+            ).fetchall()]
+        except duckdb.CatalogException:
+            return []
 
     def load(self, tick: int) -> ReplayFrame:
         from world.resources import ResourceType
