@@ -35,7 +35,8 @@ class SimConfig:
     resource_max: float = 100.0
     # Population
     initial_pop: int = 100
-    pop_growth_rate: float = 0.012   # per tick when food is sufficient
+    pop_cap: int = 500               # hard ceiling per city
+    pop_growth_rate: float = 0.003   # per tick when food is sufficient
     pop_starvation_rate: float = 0.04
     food_per_person: float = 0.05    # food consumed per person per tick
     # Military
