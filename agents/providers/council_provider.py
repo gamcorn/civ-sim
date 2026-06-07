@@ -39,6 +39,8 @@ class CouncilProvider(DecisionProvider):
             base_url=config.base_url,
             api_key=config.api_key,
         )
+        from agents.providers.rule_based import RuleBasedProvider as _RBP
+        self._fallback = _RBP()
 
     async def choose_actions_batch(self, cities: list["CityAgent"]) -> list[str]:
         if not cities:
@@ -50,8 +52,7 @@ class CouncilProvider(DecisionProvider):
             await self._run_council(civ, cities, tick)
 
         if self._directive is None:
-            from agents.providers.rule_based import RuleBasedProvider
-            return await RuleBasedProvider().choose_actions_batch(cities)
+            return await self._fallback.choose_actions_batch(cities)
 
         return [self._apply_directive(city) for city in cities]
 

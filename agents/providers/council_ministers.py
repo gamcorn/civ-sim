@@ -6,6 +6,7 @@ from typing import Any, TYPE_CHECKING
 
 import openai
 
+from agents.decisions import ALL_ACTIONS
 from agents.providers.council_prompts import (
     SECTOR_SCHEMA, BUDGET_SCHEMA, CHIEF_SCHEMA,
     build_sector_persona, build_budget_persona, build_chief_persona,
@@ -118,7 +119,6 @@ async def call_chief(
     round_num: int = 1,
     max_rounds: int = 2,
 ) -> dict | None:
-    from agents.decisions import ALL_ACTIONS
     persona = build_chief_persona(traits)
     user_msg = build_chief_user_message(
         state_snapshot, sector_outputs, budget_output, round_num, max_rounds
