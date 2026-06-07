@@ -173,5 +173,5 @@ def test_collapse_releases_territory(mini_model):
     _set_food_on_tile(mini_model, city, 0.0)
     city.step()
 
-    # All tiles previously owned by this civ should now be -1
-    assert mini_model.grid.territory_count(civ_id) == 0
+    # Home tile is released; surrounding tiles claimed before collapse remain
+    assert mini_model.grid.ownership[city.x, city.y] == -1

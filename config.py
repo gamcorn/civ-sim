@@ -39,6 +39,9 @@ class SimConfig:
     pop_growth_rate: float = 0.003   # per tick when food is sufficient
     pop_starvation_rate: float = 0.04
     food_per_person: float = 0.05    # food consumed per person per tick
+    capture_threshold: float = 0.3   # city captured when pop < initial_pop × this
+    settle_prob: float = 0.002       # chance/tick a saturated city founds a daughter city
+    max_cities_per_civ: int = 8      # hard ceiling on city count per civilization
     # Military
     initial_military: int = 10
     military_upkeep: float = 0.02    # food per military unit per tick

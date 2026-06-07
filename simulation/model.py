@@ -189,6 +189,22 @@ class CivModel(mesa.Model):
                 revert_mask[agent.x, agent.y] = False
         ownership[revert_mask] = -1
 
+    def _find_settle_location(self, civ: "Civilization") -> tuple[int, int] | None:
+        """Return an owned tile at least 10 tiles from every existing city, or None."""
+        from agents.city import CityAgent
+        city_positions = [(a.x, a.y) for a in self.agents if isinstance(a, CityAgent)]
+        ownership = np.asarray(self.grid.ownership)
+        xs, ys = np.where(ownership == civ.civ_id)
+        if len(xs) == 0:
+            return None
+        n = min(100, len(xs))
+        indices = self.random.sample(range(len(xs)), n)
+        for i in indices:
+            tx, ty = int(xs[i]), int(ys[i])
+            if not city_positions or min(abs(cx - tx) + abs(cy - ty) for cx, cy in city_positions) >= 10:
+                return tx, ty
+        return None
+
     def _create_civs(self) -> list[Civilization]:
         cfg = self.config
         if not cfg.civ_providers:

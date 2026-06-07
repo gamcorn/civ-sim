@@ -48,6 +48,7 @@ class CityAgent(Grid2DMovingAgent):
         self._execute(action)
         self.last_action = action
         self._grow_population()
+        self._maybe_settle()
 
     # ------------------------------------------------------------------
 
@@ -164,11 +165,12 @@ class CityAgent(Grid2DMovingAgent):
         target = _attack_target(self)
         if target is None:
             return
-        my_str = self.military * (1 + len(self.civ.discovered_techs) * self.model.config.tech_military_bonus)
-        enemy_str = target.military * (1 + len(target.civ.discovered_techs) * self.model.config.tech_military_bonus)
+        cfg = self.model.config
+        my_str = self.military * (1 + len(self.civ.discovered_techs) * cfg.tech_military_bonus)
+        enemy_str = target.military * (1 + len(target.civ.discovered_techs) * cfg.tech_military_bonus)
         win_prob = my_str / (my_str + enemy_str + 1e-6)
         if self.model.random.random() < win_prob:
-            # Victory: capture target's territory
+            # Victory: damage defender and claim surrounding tiles
             target.military = max(0, target.military - int(self.military * 0.3))
             target.population = max(0, target.population - int(target.population * 0.2))
             for dx in range(-1, 2):
@@ -177,18 +179,70 @@ class CityAgent(Grid2DMovingAgent):
                     if 0 <= nx < self.model.grid.width and 0 <= ny < self.model.grid.height:
                         if self.model.grid.ownership[nx, ny] == target.civ.civ_id:
                             self.model.grid.claim(nx, ny, self.civ.civ_id)
+            # City capture: weakened city changes hands
+            if target.population < cfg.initial_pop * cfg.capture_threshold:
+                self._capture_city(target)
         else:
             # Defeat: attacker takes losses
             self.military = max(0, self.military - int(self.military * 0.25))
+
+    def _capture_city(self, target: "CityAgent") -> None:
+        """Transfer a weakened enemy city to this civilization."""
+        target.civ = self.civ
+        self.model.grid.claim(target.x, target.y, self.civ.civ_id)
+        self.model.logger.log_event(
+            tick=self.model.steps,
+            agent_id=str(target.unique_id),
+            civ_id=self.civ.civ_id,
+            action="capture",
+            pop=target.population,
+            military=target.military,
+            tech_level=self.civ.tech_level,
+            territory=self.model.grid.territory_count(self.civ.civ_id),
+            env_event="",
+        )
+
+    def _maybe_settle(self) -> None:
+        """Probabilistically found a daughter city when population and territory allow."""
+        cfg = self.model.config
+        if self.population < cfg.pop_cap * 0.9:
+            return
+        if self.food_stock < 40:
+            return
+        civ_city_count = sum(
+            1 for a in self.model.agents
+            if isinstance(a, CityAgent) and a.civ is self.civ
+        )
+        if civ_city_count >= cfg.max_cities_per_civ:
+            return
+        if self.model.random.random() > cfg.settle_prob:
+            return
+        pos = self.model._find_settle_location(self.civ)
+        if pos is None:
+            return
+        settler_pop = cfg.initial_pop // 2
+        self.population -= settler_pop
+        new_city = CityAgent(self.model, self.civ, pos[0], pos[1])
+        new_city.population = settler_pop
+        new_city.food_stock = 20.0
+        self.model.logger.log_event(
+            tick=self.model.steps,
+            agent_id=str(new_city.unique_id),
+            civ_id=self.civ.civ_id,
+            action="settle",
+            pop=new_city.population,
+            military=0,
+            tech_level=self.civ.tech_level,
+            territory=self.model.grid.territory_count(self.civ.civ_id),
+            env_event="",
+        )
 
     def _do_research(self) -> None:
         from technology.discovery import TechEngine
         self.model.tech_engine.check(self)
 
     def _collapse(self) -> None:
-        self.model.grid.ownership[
-            self.model.grid.ownership == self.civ.civ_id
-        ] = -1  # surrender territory
+        self.model.grid.ownership[self.x, self.y] = -1  # release home tile only
         self.model.logger.log_event(
             tick=self.model.steps,
             agent_id=str(self.unique_id),
