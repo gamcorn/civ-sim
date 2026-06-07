@@ -15,13 +15,22 @@ def mini_config():
 
 
 def test_military_decays_each_tick(mini_config):
-    """Each call to _consume_resources reduces military by ceil(military * 0.008)."""
+    """Each call to _consume_resources reduces military by int(military * 0.02)."""
     model = CivModel(mini_config)
     city = next(a for a in model.agents if isinstance(a, CityAgent))
     city.military = 100
     city._consume_resources()
     assert city.military < 100, "Military should decay each tick"
-    assert city.military == 99, "ceil(100 * 0.008) = 1, so 100 - 1 = 99"
+    assert city.military == 98, "int(100 * 0.02) = 2, so 100 - 2 = 98"
+
+
+def test_small_military_does_not_decay(mini_config):
+    """Cities with military < 50 have no decay (int(49*0.02)=0)."""
+    model = CivModel(mini_config)
+    city = next(a for a in model.agents if isinstance(a, CityAgent))
+    city.military = 49
+    city._consume_resources()
+    assert city.military == 49, "int(49 * 0.02) = 0, no decay for small military"
 
 
 def test_apply_disease_reduces_all_city_populations(mini_config):

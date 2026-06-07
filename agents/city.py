@@ -66,7 +66,7 @@ class CityAgent(Grid2DMovingAgent):
             self.population = max(0, self.population - loss)
 
         # Military attrition — units erode without active fortification
-        decay = math.ceil(self.military * 0.008)
+        decay = int(self.military * 0.02)
         self.military = max(0, self.military - decay)
 
     def _grow_population(self) -> None:
