@@ -53,8 +53,8 @@ class CityAgent(Grid2DMovingAgent):
 
     def _consume_resources(self) -> None:
         cfg = self.model.config
-        # Passive harvest from the city tile
-        self.food_stock += self.model.grid.consume(self.x, self.y, ResourceType.FOOD, 5.0)
+        # Passive harvest from the city tile (3 < regen 4/tick so tile stays positive)
+        self.food_stock += self.model.grid.consume(self.x, self.y, ResourceType.FOOD, 3.0)
 
         # Consumption from stockpile
         needed = self.population * cfg.food_per_person + self.military * cfg.military_upkeep
@@ -65,8 +65,11 @@ class CityAgent(Grid2DMovingAgent):
             loss = int(math.ceil(self.population * cfg.pop_starvation_rate))
             self.population = max(0, self.population - loss)
 
-        # Military attrition — units erode without active fortification
-        decay = int(self.military * 0.02)
+        # Military attrition — stochastic rounding so small forces still decay
+        decay_f = self.military * 0.02
+        decay = int(decay_f)
+        if self.model.random.random() < (decay_f - decay):
+            decay += 1
         self.military = max(0, self.military - decay)
 
     def _grow_population(self) -> None:
