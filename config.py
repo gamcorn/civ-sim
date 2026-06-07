@@ -31,7 +31,7 @@ class SimConfig:
     food_regen: float = 0.04
     water_regen: float = 0.02
     wood_regen: float = 0.015
-    mineral_regen: float = 0.0   # non-renewable by default
+    mineral_regen: float = 0.005  # slow renewal keeps research viable
     resource_max: float = 100.0
     # Population
     initial_pop: int = 100

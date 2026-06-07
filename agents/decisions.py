@@ -74,6 +74,9 @@ def _resource_modifier(action: str, agent: "CityAgent") -> float:
         ratio = enemy_mil / civ_mil
         if ratio > 1.0:
             return min(0.7, (ratio - 1.0) * 0.5)
+        # Baseline: cities want to maintain a minimum garrison
+        if agent.military < 15:
+            return 0.3 * (1.0 - agent.military / 15.0)
         return 0.0
     if action == ATTACK:
         # Only when we have military advantage
