@@ -34,6 +34,13 @@ class CivModel(mesa.Model):
         self.tech_engine = TechEngine()
         self.logger = EventLogger(config.db_path, config.rng_seed, config.db_flush_interval)
 
+        from storage.snapshot import SnapshotWriter
+        self._snapshot_writer = (
+            SnapshotWriter(config.db_path, config.rng_seed)
+            if config.snapshot_interval > 0
+            else None
+        )
+
         # Climate-shift counter (ticks remaining with reduced food regen)
         self._climate_penalty_ticks: int = 0
 
@@ -99,11 +106,20 @@ class CivModel(mesa.Model):
             self.history[f"pop_{i}"].append(civ.total_pop)
             self.history[f"mil_{i}"].append(civ.total_military)
 
+        # 7b. Write snapshot if interval is configured
+        if self._snapshot_writer and self.steps % self.config.snapshot_interval == 0:
+            self._snapshot_writer.write(
+                self.steps, self.grid, list(self.agents), self.civilizations
+            )
+
         # 8. Stop if only one civ remains or max ticks reached
         alive = [c for c in self.civilizations if c.alive]
         if len(alive) <= 1 or self.steps >= self.config.max_ticks:
             self.running = False
             self.logger.close()
+            if self._snapshot_writer:
+                self._snapshot_writer.close()
+                self._snapshot_writer = None
 
     # ------------------------------------------------------------------
 
