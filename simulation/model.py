@@ -190,18 +190,29 @@ class CivModel(mesa.Model):
         ownership[revert_mask] = -1
 
     def _find_settle_location(self, civ: "Civilization") -> tuple[int, int] | None:
-        """Return an owned tile at least 10 tiles from every existing city, or None."""
+        """Return an unclaimed frontier tile at least 6 tiles from every same-civ city."""
         from agents.city import CityAgent
-        city_positions = [(a.x, a.y) for a in self.agents if isinstance(a, CityAgent)]
+        own_positions = [(a.x, a.y) for a in self.agents if isinstance(a, CityAgent) and a.civ is civ]
         ownership = np.asarray(self.grid.ownership)
-        xs, ys = np.where(ownership == civ.civ_id)
-        if len(xs) == 0:
+        owned = ownership == civ.civ_id
+        unclaimed = ownership == -1
+        # Frontier: unclaimed tiles adjacent to owned territory
+        adj = np.zeros_like(owned)
+        adj[1:, :] |= owned[:-1, :]
+        adj[:-1, :] |= owned[1:, :]
+        adj[:, 1:] |= owned[:, :-1]
+        adj[:, :-1] |= owned[:, 1:]
+        frontier_xs, frontier_ys = np.where(unclaimed & adj)
+        if len(frontier_xs) == 0:
+            # Fall back to any unclaimed tile
+            frontier_xs, frontier_ys = np.where(unclaimed)
+        if len(frontier_xs) == 0:
             return None
-        n = min(100, len(xs))
-        indices = self.random.sample(range(len(xs)), n)
+        n = min(200, len(frontier_xs))
+        indices = self.random.sample(range(len(frontier_xs)), n)
         for i in indices:
-            tx, ty = int(xs[i]), int(ys[i])
-            if not city_positions or min(abs(cx - tx) + abs(cy - ty) for cx, cy in city_positions) >= 10:
+            tx, ty = int(frontier_xs[i]), int(frontier_ys[i])
+            if not own_positions or min(abs(cx - tx) + abs(cy - ty) for cx, cy in own_positions) >= 6:
                 return tx, ty
         return None
 

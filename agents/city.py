@@ -31,6 +31,7 @@ class CityAgent(Grid2DMovingAgent):
         self.last_action: str = "spawn"
         self.age: int = 0
         self._pending_action: str | None = None
+        self._settle_cooldown: int = 0  # ticks until this city can settle again
 
         # Claim starting tile
         model.grid.claim(x, y, civ.civ_id)
@@ -203,11 +204,12 @@ class CityAgent(Grid2DMovingAgent):
         )
 
     def _maybe_settle(self) -> None:
-        """Probabilistically found a daughter city when population and territory allow."""
+        """Found a daughter city when population hits the cap and cooldown has elapsed."""
         cfg = self.model.config
-        if self.population < cfg.pop_cap * 0.9:
+        if self._settle_cooldown > 0:
+            self._settle_cooldown -= 1
             return
-        if self.food_stock < 40:
+        if self.population < cfg.pop_cap:
             return
         civ_city_count = sum(
             1 for a in self.model.agents
@@ -215,16 +217,23 @@ class CityAgent(Grid2DMovingAgent):
         )
         if civ_city_count >= cfg.max_cities_per_civ:
             return
-        if self.model.random.random() > cfg.settle_prob:
-            return
         pos = self.model._find_settle_location(self.civ)
         if pos is None:
             return
         settler_pop = cfg.initial_pop // 2
         self.population -= settler_pop
+        self._settle_cooldown = cfg.settle_cooldown
         new_city = CityAgent(self.model, self.civ, pos[0], pos[1])
         new_city.population = settler_pop
         new_city.food_stock = 20.0
+        # Drain food from surrounding tiles — land clearing stresses local resources
+        r = 3
+        for dx in range(-r, r + 1):
+            for dy in range(-r, r + 1):
+                nx, ny = pos[0] + dx, pos[1] + dy
+                if 0 <= nx < self.model.grid.width and 0 <= ny < self.model.grid.height:
+                    current = self.model.grid.get(nx, ny, ResourceType.FOOD)
+                    self.model.grid.consume(nx, ny, ResourceType.FOOD, current * cfg.settle_land_drain)
         self.model.logger.log_event(
             tick=self.model.steps,
             agent_id=str(new_city.unique_id),
