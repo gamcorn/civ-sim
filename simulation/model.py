@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio
+import math
 import random as stdlib_random
 
 import mesa
@@ -86,16 +87,14 @@ class CivModel(mesa.Model):
         self.agents.shuffle_do("step")
 
         # 6. Update civilization aggregates
-        from agents.city import CityAgent as _CA
         for civ in self.civilizations:
-            cities = [a for a in self.agents if isinstance(a, _CA) and a.civ is civ]
+            cities = [a for a in self.agents if isinstance(a, CityAgent) and a.civ is civ]
             civ.update_aggregates(cities)
 
-        # 6. Log each city's state
+        # 7. Log each city's state
         env_tag = ",".join(e.name for e in events) if events else ""
-        from agents.city import CityAgent as _CA2
         for agent in list(self.agents):
-            if isinstance(agent, _CA2):
+            if isinstance(agent, CityAgent):
                 self.logger.log_event(
                     tick=self.steps,
                     agent_id=str(agent.unique_id),
@@ -108,19 +107,19 @@ class CivModel(mesa.Model):
                     env_event=env_tag,
                 )
 
-        # 7. Record history snapshot
+        # 8. Record history snapshot
         self.history["tick"].append(self.steps)
         for i, civ in enumerate(self.civilizations):
             self.history[f"pop_{i}"].append(civ.total_pop)
             self.history[f"mil_{i}"].append(civ.total_military)
 
-        # 7b. Write snapshot if interval is configured
+        # 9. Write snapshot if interval is configured
         if self._snapshot_writer and self.steps % self.config.snapshot_interval == 0:
             self._snapshot_writer.write(
                 self.steps, self.grid, list(self.agents), self.civilizations
             )
 
-        # 8. Stop if only one civ remains or max ticks reached
+        # 10. Stop if only one civ remains or max ticks reached
         alive = [c for c in self.civilizations if c.alive]
         if len(alive) <= 1 or self.steps >= self.config.max_ticks:
             self.running = False
@@ -155,10 +154,8 @@ class CivModel(mesa.Model):
 
     def _apply_disease(self) -> None:
         """Apply epidemic: each city loses ~20% population (5× starvation rate)."""
-        import math
-        from agents.city import CityAgent as _CA
         for agent in list(self.agents):
-            if isinstance(agent, _CA):
+            if isinstance(agent, CityAgent):
                 hit = math.ceil(agent.population * self.config.pop_starvation_rate * 5)
                 agent.population = max(1, agent.population - hit)
 
@@ -186,6 +183,10 @@ class CivModel(mesa.Model):
                 enemy_adj |= e_adj
             border = owned & enemy_adj
             revert_mask |= border & rolls
+        # Protect city home tiles from reversion
+        for agent in self.agents:
+            if isinstance(agent, CityAgent):
+                revert_mask[agent.x, agent.y] = False
         ownership[revert_mask] = -1
 
     def _create_civs(self) -> list[Civilization]:

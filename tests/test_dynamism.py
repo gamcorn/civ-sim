@@ -60,3 +60,12 @@ def test_border_tiles_revert_with_probability_one(mini_config):
 
     assert model.grid.ownership[5, 5] == -1, "Civ-0 border tile should revert"
     assert model.grid.ownership[6, 5] == -1, "Civ-1 border tile should revert"
+
+
+def test_apply_disease_does_not_kill_city(mini_config):
+    """Disease cannot reduce population below 1 (cities don't collapse from disease alone)."""
+    model = CivModel(mini_config)
+    city = next(a for a in model.agents if isinstance(a, CityAgent))
+    city.population = 1
+    model._apply_disease()
+    assert city.population == 1, "Disease should not kill a city outright (clamped to 1)"
