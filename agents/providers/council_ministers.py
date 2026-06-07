@@ -28,6 +28,35 @@ def _parse_json_safe(raw: str) -> dict[str, Any] | None:
         return None
 
 
+async def _call_llm(
+    client: openai.AsyncOpenAI,
+    model: str,
+    timeout: float,
+    *,
+    system: str,
+    user: str,
+    temperature: float,
+    max_tokens: int,
+) -> dict[str, Any] | None:
+    try:
+        resp = await asyncio.wait_for(
+            client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+            ),
+            timeout=timeout,
+        )
+        raw = resp.choices[0].message.content or ""
+        return _parse_json_safe(raw)
+    except Exception:
+        return None
+
+
 async def call_sector_minister(
     spec: dict,
     state_snapshot: str,
@@ -39,26 +68,16 @@ async def call_sector_minister(
 ) -> dict:
     persona = build_sector_persona(spec, traits)
     user_msg = build_sector_user_message(spec, state_snapshot, previous_opinions)
-    try:
-        resp = await asyncio.wait_for(
-            client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": f"{persona}\n\nSchema:\n{SECTOR_SCHEMA}"},
-                    {"role": "user", "content": user_msg},
-                ],
-                temperature=0.3,
-                max_tokens=256,
-            ),
-            timeout=timeout,
-        )
-        raw = resp.choices[0].message.content or ""
-        parsed = _parse_json_safe(raw)
-        if parsed is not None:
-            parsed["name"] = spec["name"]
-            return parsed
-    except Exception:
-        pass
+    parsed = await _call_llm(
+        client, model, timeout,
+        system=f"{persona}\n\nSchema:\n{SECTOR_SCHEMA}",
+        user=user_msg,
+        temperature=0.3,
+        max_tokens=256,
+    )
+    if parsed is not None:
+        parsed["name"] = spec["name"]
+        return parsed
     return {
         "name": spec["name"],
         "analysis": "",
@@ -78,26 +97,14 @@ async def call_budget_minister(
 ) -> dict:
     persona = build_budget_persona(traits)
     user_msg = build_budget_user_message(state_snapshot, sector_outputs)
-    try:
-        resp = await asyncio.wait_for(
-            client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": f"{persona}\n\nSchema:\n{BUDGET_SCHEMA}"},
-                    {"role": "user", "content": user_msg},
-                ],
-                temperature=0.2,
-                max_tokens=256,
-            ),
-            timeout=timeout,
-        )
-        raw = resp.choices[0].message.content or ""
-        parsed = _parse_json_safe(raw)
-        if parsed is not None:
-            return parsed
-    except Exception:
-        pass
-    return {"veto": False, "veto_reason": None, "approved_weights": {}}
+    parsed = await _call_llm(
+        client, model, timeout,
+        system=f"{persona}\n\nSchema:\n{BUDGET_SCHEMA}",
+        user=user_msg,
+        temperature=0.2,
+        max_tokens=256,
+    )
+    return parsed if parsed is not None else {"veto": False, "veto_reason": None, "approved_weights": {}}
 
 
 async def call_chief(
@@ -116,28 +123,18 @@ async def call_chief(
     user_msg = build_chief_user_message(
         state_snapshot, sector_outputs, budget_output, round_num, max_rounds
     )
-    try:
-        resp = await asyncio.wait_for(
-            client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": f"{persona}\n\nSchema:\n{CHIEF_SCHEMA}"},
-                    {"role": "user", "content": user_msg},
-                ],
-                temperature=0.2,
-                max_tokens=512,
-            ),
-            timeout=timeout,
-        )
-        raw = resp.choices[0].message.content or ""
-        parsed = _parse_json_safe(raw)
-        if parsed is None:
-            return None
-        weights = parsed.get("action_weights", {})
-        parsed["action_weights"] = {
-            a: max(-1.0, min(1.0, float(weights.get(a, 0.0))))
-            for a in ALL_ACTIONS
-        }
-        return parsed
-    except Exception:
+    parsed = await _call_llm(
+        client, model, timeout,
+        system=f"{persona}\n\nSchema:\n{CHIEF_SCHEMA}",
+        user=user_msg,
+        temperature=0.2,
+        max_tokens=512,
+    )
+    if parsed is None:
         return None
+    weights = parsed.get("action_weights", {})
+    parsed["action_weights"] = {
+        a: max(-1.0, min(1.0, float(weights.get(a, 0.0))))
+        for a in ALL_ACTIONS
+    }
+    return parsed
