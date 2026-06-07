@@ -65,6 +65,10 @@ class CityAgent(Grid2DMovingAgent):
             loss = int(math.ceil(self.population * cfg.pop_starvation_rate))
             self.population = max(0, self.population - loss)
 
+        # Military attrition — units erode without active fortification
+        decay = math.ceil(self.military * 0.008)
+        self.military = max(0, self.military - decay)
+
     def _grow_population(self) -> None:
         food_here = self.model.grid.get(self.x, self.y, ResourceType.FOOD)
         if food_here > self.model.config.resource_max * 0.2:
