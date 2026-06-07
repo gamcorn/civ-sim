@@ -77,8 +77,6 @@ class TerminalRenderer:
     # ------------------------------------------------------------------
 
     def update(self, model: "CivModel") -> None:
-        from agents.city import CityAgent
-
         lines: list[str] = []
 
         # ── Header ────────────────────────────────────────────────────────
@@ -96,7 +94,7 @@ class TerminalRenderer:
         for civ in model.civilizations:
             cities = [
                 a for a in model.agents
-                if isinstance(a, CityAgent) and a.civ.civ_id == civ.civ_id
+                if hasattr(a, 'civ') and a.civ.civ_id == civ.civ_id
             ]
             total_pop  = sum(c.population  for c in cities)
             total_mil  = sum(c.military    for c in cities)
@@ -134,7 +132,7 @@ class TerminalRenderer:
         # Index city positions for O(1) lookup — stores (civ_id, population)
         city_at: dict[tuple[int, int], tuple[int, float]] = {}
         for a in model.agents:
-            if isinstance(a, CityAgent):
+            if hasattr(a, 'civ'):
                 city_at[(a.x, a.y)] = (a.civ.civ_id, a.population)
 
         for row in range(self.map_rows):
