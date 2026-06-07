@@ -243,11 +243,11 @@ Events are sampled each tick and applied before city decisions:
 | Event | Probability/tick | Effect |
 |---|---|---|
 | Drought | 4% | Halves food in a random 10×10 patch |
-| Disease | 2.5% | Every city loses ~20% population instantly |
+| Disease | 2.5% baseline | Epidemic with random transmission rate β — see below |
 | Mineral boom | 0.4% | Triples minerals in a random 6×6 patch |
 | Climate shift | 0.2% | Suppresses global food regeneration for 20 ticks |
 
-Disease was previously a silent no-op (events logged but never applied). It now causes real population loss, which reduces military via attrition and opens attack windows.
+**Disease / pandemic model.** Each outbreak rolls a transmission rate β uniformly from [0.1, 3.0]. Mortality per city is `min(85%, β × base_rate × proximity_factor)`, where `proximity_factor` grows by 25% for each same-civilization city within 20 tiles. A β=0.1 event is a mild flu (< 1% loss); a β=3.0 event with 7 neighbors nearby can wipe out over 80% of a city's population. Disease probability also scales with land occupation: `base_prob × (1 + occupation × 3.0)` — the more territory a civilization controls, the greater the zoonotic spillover risk, matching the real-world pattern where agricultural expansion into animal habitats drives pandemic emergence.
 
 ### Military attrition
 
@@ -259,9 +259,19 @@ Each tick, tiles on the contested border between two civilizations have a 2% cha
 
 City home tiles are protected from reversion — a city can never lose its own founding tile this way.
 
-### Combat
+### Population and expansion
+
+Growth rate is dynamic rather than fixed. Each tick a city grows by `rate_max × food_ratio × demo_factor`, where `food_ratio` is how full the city tile is relative to half-capacity, and `demo_factor` falls linearly as total civilization population approaches 3,000 (floored at 0.1× so growth never fully stops). This reproduces the demographic transition: small, resource-rich civilizations expand rapidly; large, land-saturated ones stagnate.
+
+When a city's population hits the cap (500 by default) it automatically sends settlers to found a daughter city on the nearest unclaimed frontier tile at least 6 tiles from any existing city. Settling depletes 50% of the food on tiles within radius 3 of the new site, creating a local resource shock that prevents immediate chaining. A 50-tick cooldown applies before the same city can settle again. Each civilization is capped at 8 cities from voluntary founding, though military conquest can push the count higher.
+
+### Combat and city capture
 
 Attack is feasible when an enemy city is within **25 Manhattan tiles** and the attacker has at least 5 military. The scoring engine favors attack when `civ_total_military > enemy_total_military × 0.8` — any slight edge is enough. Trade is feasible within **30 tiles**.
+
+**Resource-driven conflict.** Civilizations under food stress don't just starve — they first seek land (EXPAND scores higher when food stock is low) and then turn to war (ATTACK scores spike under severe scarcity). Cities that detect enemy territory encroaching within 5 tiles get a defensive attack bonus and can attack with as few as 2 military, regardless of overall civ strength.
+
+**City capture.** When a defeated city's population falls below 30% of its founding value, it changes hands: the city, its home tile, and all surrounding territory claimed in the assault transfer to the attacker's civilization. Captures appear as `action=capture` events in the DuckDB log and can dramatically shift the balance mid-run.
 
 Victories capture territory around the defeated city; defeats cost the attacker 25% of its military. Either outcome shifts the balance for subsequent turns.
 
