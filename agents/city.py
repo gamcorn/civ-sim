@@ -73,8 +73,11 @@ class CityAgent(Grid2DMovingAgent):
         food_here = self.model.grid.get(self.x, self.y, ResourceType.FOOD)
         if food_here > self.model.config.resource_max * 0.2:
             tech_bonus = len(self.civ.discovered_techs) * 0.005
-            growth = int(self.population * (self.model.config.pop_growth_rate + tech_bonus))
-            self.population += max(0, growth)
+            growth_f = self.population * (self.model.config.pop_growth_rate + tech_bonus)
+            growth = int(growth_f)
+            if self.model.random.random() < (growth_f - growth):
+                growth += 1
+            self.population += growth
 
     def _execute(self, action: str) -> None:
         if action == GATHER:
