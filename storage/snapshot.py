@@ -158,6 +158,9 @@ class SnapshotReader:
             [tick],
         ).fetchone()
 
+        if row is None:
+            raise KeyError(f"No snapshot found for tick {tick}")
+
         w, h = row[2], row[3]
         resource_max = float(row[4])
 
@@ -213,7 +216,7 @@ class SnapshotReader:
                 GROUP BY tick
                 ORDER BY tick
             """).fetchall()
-        except Exception:
+        except duckdb.CatalogException:
             return empty
         h: dict = {"tick": [], "pop_0": [], "pop_1": [], "mil_0": [], "mil_1": []}
         for r in rows:
