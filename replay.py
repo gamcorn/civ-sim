@@ -18,10 +18,12 @@ import time
 
 def _nearest_idx(ticks: list[int], target: int) -> int:
     """Return index of first tick >= target; last index if all are smaller."""
+    if not ticks:
+        return 0
     for i, t in enumerate(ticks):
         if t >= target:
             return i
-    return max(0, len(ticks) - 1)
+    return len(ticks) - 1
 
 
 def _apply_key(key: str, state: dict, n_ticks: int) -> None:
@@ -89,11 +91,19 @@ def _read_keys_raw(key_q: queue.Queue) -> None:
 
 def replay_terminal(reader, from_tick: int, speed: float) -> None:
     from visualization.terminal_renderer import TerminalRenderer
+    import termios
 
     ticks = reader.ticks()
     if not ticks:
         print("No snapshots found in this database.", file=sys.stderr)
         return
+
+    # Save original terminal state before setting raw mode
+    fd = sys.stdin.fileno()
+    try:
+        _saved_term = termios.tcgetattr(fd)
+    except Exception:
+        _saved_term = None
 
     state = {
         "idx": _nearest_idx(ticks, from_tick),
@@ -131,13 +141,11 @@ def replay_terminal(reader, from_tick: int, speed: float) -> None:
 
             time.sleep(1.0 / max(state["speed"], 0.125))
     finally:
-        import termios
-        fd = sys.stdin.fileno()
-        try:
-            termios.tcsetattr(fd, termios.TCSADRAIN,
-                              termios.tcgetattr(fd))
-        except Exception:
-            pass
+        if _saved_term is not None:
+            try:
+                termios.tcsetattr(fd, termios.TCSADRAIN, _saved_term)
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------
