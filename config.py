@@ -14,43 +14,50 @@ class ProviderConfig:
     use_completions_api: bool = False  # send all prompts in one /v1/completions call
     max_concurrent: int = 64           # semaphore cap when chat API is used
     prompt_template: str = ""          # chat template; empty = Llama-3.1 default
+    # Council provider settings
+    directive_period: int = 10         # ticks between scheduled council sessions
+    max_rounds: int = 2                # deliberation rounds per council session
+    sector_model: str = ""             # model for sector ministers (falls back to model)
+    chief_model: str = ""              # model for chief of staff (falls back to model)
+    emergency_triggers: bool = True    # allow out-of-schedule emergency councils
+    emergency_cooldown_ticks: int = 3  # min ticks between emergency sessions
 
 
 @dataclass
 class SimConfig:
     # World
-    width: int = 80
-    height: int = 60
+    width: int = 100
+    height: int = 80
     # Civilizations
     num_civs: int = 2
-    cities_per_civ: int = 4
+    cities_per_civ: int = 2
     # Simulation
     max_ticks: int = 500
     rng_seed: int = 42
     # Resource regeneration per tick (fraction of max)
-    food_regen: float = 0.04
-    water_regen: float = 0.02
-    wood_regen: float = 0.015
+    food_regen: float = 0.02
+    water_regen: float = 0.015
+    wood_regen: float = 0.01
     mineral_regen: float = 0.005  # slow renewal keeps research viable
     resource_max: float = 100.0
     # Population
-    initial_pop: int = 100
-    pop_cap: int = 500               # hard ceiling per city
+    initial_pop: int = 50
+    pop_cap: int = 1000             # hard ceiling per city
     pop_growth_rate_max: float = 0.012  # max growth rate (small civ, abundant food)
-    pop_demographic_cap: int = 3000     # civ total pop at which growth → 10% of max
+    pop_demographic_cap: int = 300000000     # civ total pop at which growth → 10% of max
     pop_starvation_rate: float = 0.04
     food_per_person: float = 0.05    # food consumed per person per tick
     capture_threshold: float = 0.3   # city captured when pop < initial_pop × this
     settle_cooldown: int = 50        # ticks a city must wait before settling again
     settle_land_drain: float = 0.5   # fraction of food drained on tiles near a new city
-    max_cities_per_civ: int = 20     # hard ceiling on city count per civilization
+    max_cities_per_civ: int = 100     # hard ceiling on city count per civilization
     # Military
     initial_military: int = 10
-    military_upkeep: float = 0.02    # food per military unit per tick
+    military_upkeep: float = 0.08    # food per military unit per tick
     # Harvest
     harvest_radius: int = 5          # tiles from city that gather action reaches
     # Technology multipliers on production/military
-    tech_food_bonus: float = 0.2     # +20% food per tech discovered
+    tech_food_bonus: float = 0.1    # +20% food per tech discovered
     tech_military_bonus: float = 0.3
     # Environmental events (probability per tick)
     drought_prob: float = 0.04
