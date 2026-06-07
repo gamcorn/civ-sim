@@ -156,7 +156,8 @@ class Renderer:
             [], [], s=[], c=[], cmap="RdYlGn_r", vmin=0.1, vmax=3.0,
             zorder=3, edgecolors="#555", linewidths=0.4,
         )
-        self.ax_epi.set_title("Epidemic Events  (dot size ∝ β)", fontsize=9)
+        self._epi_annotations: list = []   # text labels showing death count per dot
+        self.ax_epi.set_title("Epidemic Events  (color=β · size=deaths)", fontsize=9)
         self.ax_epi.set_xlabel("tick", fontsize=7)
         self.ax_epi.set_ylabel("β  (transmission rate)", fontsize=7)
         self.ax_epi.set_ylim(-0.1, 3.3)
@@ -238,14 +239,28 @@ class Renderer:
         if epi:
             et = [e[0] for e in epi]
             eb = [e[1] for e in epi]
+            ed = [e[2] for e in epi]
             self._epi_sc.set_offsets(np.c_[et, eb])
-            self._epi_sc.set_sizes([max(20, b * 35) for b in eb])
+            self._epi_sc.set_sizes([max(25, d / 2) for d in ed])
             self._epi_sc.set_array(np.array(eb))
             self.ax_epi.set_xlim(0, max(h["tick"]) if h["tick"] else 1)
 
+            # Refresh death-count annotations (cheap — epidemics are rare)
+            for ann in self._epi_annotations:
+                ann.remove()
+            self._epi_annotations.clear()
+            for tick, beta, deaths in epi:
+                ann = self.ax_epi.annotate(
+                    f"{deaths:,}",
+                    xy=(tick, beta),
+                    xytext=(0, 7), textcoords="offset points",
+                    fontsize=5, color="white", ha="center", va="bottom",
+                )
+                self._epi_annotations.append(ann)
+
         # Vertical epidemic markers on population chart (added incrementally)
         n_drawn = len(self._epi_vlines)
-        for tick, beta in model._epidemic_log[n_drawn:]:
+        for tick, beta, _deaths in model._epidemic_log[n_drawn:]:
             alpha = min(0.75, 0.15 + beta / 3.5)
             color = plt.cm.RdYlGn_r(beta / 3.0)
             vl = self.ax_pop.axvline(tick, color=color, alpha=alpha, lw=0.8, ls=":")

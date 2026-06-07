@@ -180,7 +180,7 @@ class CivModel(mesa.Model):
         cities = [a for a in self.agents if isinstance(a, CityAgent)]
         base_rate = self.config.pop_starvation_rate  # ~4% base
 
-        self._epidemic_log.append((self.steps, beta))
+        total_deaths = 0
         for city in cities:
             # Count same-civ cities within 20 tiles — dense networks spread disease faster
             nearby = sum(
@@ -192,8 +192,10 @@ class CivModel(mesa.Model):
             proximity_factor = 1.0 + nearby * 0.25
             mortality = min(0.85, beta * base_rate * proximity_factor)
             hit = math.ceil(city.population * mortality)
+            total_deaths += hit
             city.population = max(1, city.population - hit)
             city._disease_hit_ticks = 8  # show disease overlay for 8 ticks
+        self._epidemic_log.append((self.steps, beta, total_deaths))
 
     def _apply_border_reversion(self) -> None:
         """Tiles at the border of two civs revert to unclaimed with border_reversion_prob."""
