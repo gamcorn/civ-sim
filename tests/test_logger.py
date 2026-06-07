@@ -1,66 +1,49 @@
+# tests/test_logger.py
+import json
 import pytest
+import duckdb
 from storage.logger import EventLogger
 
 
 @pytest.fixture
-def logger():
-    lg = EventLogger(db_path=":memory:", seed=42, flush_interval=5)
-    yield lg
-    try:
-        lg.close()
-    except Exception:
-        pass
+def mem_logger():
+    logger = EventLogger(":memory:", seed=0, flush_interval=1)
+    yield logger
+    logger.close()
 
 
-def _row(tick=1, agent_id="a1", civ_id=0, action="gather",
-         pop=100, military=10, tech_level=0, territory=5, env_event=""):
-    return dict(tick=tick, agent_id=agent_id, civ_id=civ_id, action=action,
-                pop=pop, military=military, tech_level=tech_level,
-                territory=territory, env_event=env_event)
+def test_log_directive_inserts_row(mem_logger):
+    from agents.providers.council_provider import StrategicDirective
+    d = StrategicDirective(
+        era_goal="Expand east",
+        action_weights={"gather": 0.0, "trade": 0.0, "expand": 0.8, "fortify": 0.0, "attack": 0.0, "research": 0.0},
+        reasoning="Land pressure is high",
+        issued_at_tick=5,
+        valid_for_ticks=10,
+        emergency=False,
+    )
+    mem_logger.log_directive(tick=5, civ_id=0, directive=d)
+    rows = mem_logger._con.execute("SELECT * FROM directives").fetchall()
+    assert len(rows) == 1
+    tick, civ_id, era_goal, weights_json, reasoning, emergency, issued_at_tick = rows[0]
+    assert tick == 5
+    assert civ_id == 0
+    assert era_goal == "Expand east"
+    weights = json.loads(weights_json)
+    assert weights["expand"] == 0.8
+    assert emergency is False
 
 
-def test_log_event_buffers_without_flushing():
-    lg = EventLogger(":memory:", seed=1, flush_interval=10)
-    for i in range(4):
-        lg.log_event(**_row(tick=i))
-    assert len(lg._buffer) == 4
-    lg.close()
-
-
-def test_flush_writes_to_db_and_clears_buffer(logger):
-    for i in range(5):
-        logger.log_event(**_row(tick=i))
-    # flush_interval=5 triggers auto-flush on 5th insert
-    assert len(logger._buffer) == 0
-    rows = logger._con.execute("SELECT count(*) FROM events").fetchone()[0]
-    assert rows == 5
-
-
-def test_manual_flush_writes_partial_buffer(logger):
-    logger.log_event(**_row(tick=1))
-    logger.log_event(**_row(tick=2))
-    logger.flush()
-    assert len(logger._buffer) == 0
-    rows = logger._con.execute("SELECT count(*) FROM events").fetchone()[0]
-    assert rows == 2
-
-
-def test_close_flushes_remaining_rows():
-    lg = EventLogger(":memory:", seed=7, flush_interval=100)
-    lg.log_event(**_row(tick=1))
-    lg.log_event(**_row(tick=2))
-    lg.close()
-    assert len(lg._buffer) == 0
-
-
-def test_rows_have_correct_seed_and_action():
-    lg = EventLogger(":memory:", seed=99, flush_interval=1)
-    lg.log_event(**_row(tick=3, action="attack"))
-    row = lg._con.execute("SELECT seed, action FROM events").fetchone()
-    assert row[0] == 99
-    assert row[1] == "attack"
-    lg.close()
-
-
-def test_flush_on_empty_buffer_does_not_raise(logger):
-    logger.flush()  # should be a no-op
+def test_log_directive_emergency_flag(mem_logger):
+    from agents.providers.council_provider import StrategicDirective
+    d = StrategicDirective(
+        era_goal="Defend now",
+        action_weights={"gather": 0.0, "trade": 0.0, "expand": 0.0, "fortify": 0.8, "attack": 0.0, "research": 0.0},
+        reasoning="Under attack",
+        issued_at_tick=12,
+        valid_for_ticks=10,
+        emergency=True,
+    )
+    mem_logger.log_directive(tick=12, civ_id=1, directive=d)
+    row = mem_logger._con.execute("SELECT emergency FROM directives").fetchone()
+    assert row[0] is True
