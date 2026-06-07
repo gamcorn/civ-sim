@@ -79,13 +79,20 @@ class CityAgent(Grid2DMovingAgent):
         if self.population >= cfg.pop_cap:
             return
         food_here = self.model.grid.get(self.x, self.y, ResourceType.FOOD)
-        if food_here > cfg.resource_max * 0.2:
-            tech_bonus = len(self.civ.discovered_techs) * 0.005
-            growth_f = self.population * (cfg.pop_growth_rate + tech_bonus)
-            growth = int(growth_f)
-            if self.model.random.random() < (growth_f - growth):
-                growth += 1
-            self.population = min(self.population + growth, cfg.pop_cap)
+        if food_here <= cfg.resource_max * 0.1:
+            return
+        # Food abundance drives growth; demographic transition dampens it as civ grows.
+        # Rich/large civs grow slowly; poor/small civs grow fast (like real demographic patterns).
+        food_ratio = min(1.0, food_here / (cfg.resource_max * 0.5))
+        civ_pop = max(1, self.civ.total_pop)
+        demo_factor = max(0.1, 1.0 - civ_pop / cfg.pop_demographic_cap)
+        tech_bonus = len(self.civ.discovered_techs) * 0.001
+        rate = cfg.pop_growth_rate_max * food_ratio * demo_factor + tech_bonus
+        growth_f = self.population * rate
+        growth = int(growth_f)
+        if self.model.random.random() < (growth_f - growth):
+            growth += 1
+        self.population = min(self.population + growth, cfg.pop_cap)
 
     def _execute(self, action: str) -> None:
         if action == GATHER:

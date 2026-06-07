@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 class EnvEvent:
     name: str
     description: str
+    transmission_rate: float = 1.0  # for disease events: β in [0.1, 3.0]
 
 
 class EventSampler:
@@ -30,8 +31,13 @@ class EventSampler:
         occupation = float((grid.ownership >= 0).sum()) / (grid.width * grid.height)
         disease_prob = self.config.disease_prob * (1.0 + occupation * self.config.disease_land_scale)
         if r.random() < disease_prob:
+            beta = round(r.uniform(0.1, 3.0), 2)
             pct = round(occupation * 100, 1)
-            fired.append(EnvEvent("disease", f"Epidemic (land use {pct}%) reduces populations"))
+            fired.append(EnvEvent(
+                "disease",
+                f"Epidemic β={beta} (land use {pct}%) sweeps populations",
+                transmission_rate=beta,
+            ))
 
         if r.random() < self.config.mineral_boom_prob:
             fired.append(self._mineral_boom(grid))

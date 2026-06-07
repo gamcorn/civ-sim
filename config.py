@@ -36,7 +36,8 @@ class SimConfig:
     # Population
     initial_pop: int = 100
     pop_cap: int = 500               # hard ceiling per city
-    pop_growth_rate: float = 0.003   # per tick when food is sufficient
+    pop_growth_rate_max: float = 0.012  # max growth rate (small civ, abundant food)
+    pop_demographic_cap: int = 3000     # civ total pop at which growth → 10% of max
     pop_starvation_rate: float = 0.04
     food_per_person: float = 0.05    # food consumed per person per tick
     capture_threshold: float = 0.3   # city captured when pop < initial_pop × this

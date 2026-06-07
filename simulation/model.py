@@ -77,8 +77,9 @@ class CivModel(mesa.Model):
             ].data *= 0.85
             self._climate_penalty_ticks -= 1
 
-        if any(e.name == "disease" for e in events):
-            self._apply_disease()
+        disease_events = [e for e in events if e.name == "disease"]
+        if disease_events:
+            self._apply_disease(beta=disease_events[0].transmission_rate)
 
         # 4. Dispatch all decisions (LLM async batch, rule-based sync)
         asyncio.run(self._dispatch_decisions())
@@ -152,12 +153,27 @@ class CivModel(mesa.Model):
 
     # ------------------------------------------------------------------
 
-    def _apply_disease(self) -> None:
-        """Apply epidemic: each city loses ~20% population (5× starvation rate)."""
-        for agent in list(self.agents):
-            if isinstance(agent, CityAgent):
-                hit = math.ceil(agent.population * self.config.pop_starvation_rate * 5)
-                agent.population = max(1, agent.population - hit)
+    def _apply_disease(self, beta: float = 1.0) -> None:
+        """Apply epidemic with transmission rate β.
+
+        Mortality = β × base_rate, amplified by nearby same-civ cities (urban density
+        accelerates spread). β~0.1 is a mild flu; β~3.0 is a catastrophic plague.
+        """
+        cities = [a for a in self.agents if isinstance(a, CityAgent)]
+        base_rate = self.config.pop_starvation_rate  # ~4% base
+
+        for city in cities:
+            # Count same-civ cities within 20 tiles — dense networks spread disease faster
+            nearby = sum(
+                1 for other in cities
+                if other is not city
+                and other.civ.civ_id == city.civ.civ_id
+                and abs(other.x - city.x) + abs(other.y - city.y) <= 20
+            )
+            proximity_factor = 1.0 + nearby * 0.25
+            mortality = min(0.85, beta * base_rate * proximity_factor)
+            hit = math.ceil(city.population * mortality)
+            city.population = max(1, city.population - hit)
 
     def _apply_border_reversion(self) -> None:
         """Tiles at the border of two civs revert to unclaimed with border_reversion_prob."""
