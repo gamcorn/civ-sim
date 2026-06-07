@@ -49,7 +49,8 @@ class SimConfig:
     tech_military_bonus: float = 0.3
     # Environmental events (probability per tick)
     drought_prob: float = 0.04
-    disease_prob: float = 0.025
+    disease_prob: float = 0.025        # baseline when no land is occupied
+    disease_land_scale: float = 3.0   # multiplier added per unit of occupation ratio
     mineral_boom_prob: float = 0.004
     climate_shift_prob: float = 0.002
     # Border dynamics

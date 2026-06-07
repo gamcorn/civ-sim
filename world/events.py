@@ -27,8 +27,11 @@ class EventSampler:
         if r.random() < self.config.drought_prob:
             fired.append(self._drought(grid))
 
-        if r.random() < self.config.disease_prob:
-            fired.append(EnvEvent("disease", "Epidemic reduces populations"))
+        occupation = float((grid.ownership >= 0).sum()) / (grid.width * grid.height)
+        disease_prob = self.config.disease_prob * (1.0 + occupation * self.config.disease_land_scale)
+        if r.random() < disease_prob:
+            pct = round(occupation * 100, 1)
+            fired.append(EnvEvent("disease", f"Epidemic (land use {pct}%) reduces populations"))
 
         if r.random() < self.config.mineral_boom_prob:
             fired.append(self._mineral_boom(grid))
