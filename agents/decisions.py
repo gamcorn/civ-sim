@@ -27,23 +27,22 @@ _WEIGHTS: dict[str, dict[str, float]] = {
 }
 
 
-def choose_action(agent: "CityAgent") -> str:
+def get_action_scores(agent: "CityAgent") -> dict[str, float]:
+    """Compute raw action scores (trait weights + resource modifiers) before feasibility filtering."""
     traits = agent.civ.traits
     t = traits.as_dict()
-    scores: dict[str, float] = {}
+    return {
+        action: sum(_WEIGHTS[action][k] * t[k] for k in t) + _resource_modifier(action, agent)
+        for action in ALL_ACTIONS
+    }
 
-    for action in ALL_ACTIONS:
-        base = sum(_WEIGHTS[action][k] * t[k] for k in t)
-        modifier = _resource_modifier(action, agent)
-        scores[action] = base + modifier
 
-    # Filter infeasible actions
+def choose_action(agent: "CityAgent") -> str:
+    scores = get_action_scores(agent)
     feasible = _feasible(agent, scores)
     if not feasible:
         return GATHER
-
-    best = max(feasible, key=lambda a: feasible[a])
-    return best
+    return max(feasible, key=lambda a: feasible[a])
 
 
 def _resource_modifier(action: str, agent: "CityAgent") -> float:

@@ -18,9 +18,38 @@ from agents.decisions import (
     _has_unclaimed_neighbor,
     _resource_modifier,
     choose_action,
+    get_action_scores,
     get_feasible_actions,
 )
 from tests.conftest import make_mock_city
+
+
+# ---------------------------------------------------------------------------
+# get_action_scores
+# ---------------------------------------------------------------------------
+
+
+def test_get_action_scores_returns_all_six_actions():
+    city = make_mock_city()
+    scores = get_action_scores(city)
+    assert set(scores.keys()) == set(ALL_ACTIONS)
+    assert all(isinstance(v, float) for v in scores.values())
+
+
+def test_get_action_scores_gather_higher_when_food_low():
+    city_hungry = make_mock_city(food_stock=0.0)
+    city_full = make_mock_city(food_stock=500.0)
+    assert get_action_scores(city_hungry)[GATHER] > get_action_scores(city_full)[GATHER]
+
+
+def test_choose_action_picks_max_feasible_score():
+    city = make_mock_city()
+    scores = get_action_scores(city)
+    action = choose_action(city)
+    feasible = get_feasible_actions(city)
+    assert action in feasible
+    best_feasible_score = max(scores[a] for a in feasible)
+    assert scores[action] == best_feasible_score
 
 
 # ---------------------------------------------------------------------------
