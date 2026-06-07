@@ -47,10 +47,12 @@ class SimConfig:
     tech_food_bonus: float = 0.2     # +20% food per tech discovered
     tech_military_bonus: float = 0.3
     # Environmental events (probability per tick)
-    drought_prob: float = 0.015
-    disease_prob: float = 0.008
+    drought_prob: float = 0.04
+    disease_prob: float = 0.025
     mineral_boom_prob: float = 0.004
     climate_shift_prob: float = 0.002
+    # Border dynamics
+    border_reversion_prob: float = 0.02
     # Cultural trait init ranges: (min, max)
     trait_range: tuple = (0.1, 0.9)
     # Logging
