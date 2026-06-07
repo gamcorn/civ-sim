@@ -75,7 +75,7 @@ class CouncilProvider(DecisionProvider):
     ) -> bool:
         model = cities[0].model
         # Food crisis
-        if sum(c.food_stock for c in cities) / len(cities) < 10.0:
+        if cities and sum(c.food_stock for c in cities) / len(cities) < 10.0:
             return True
         # Military threat
         enemy_mil = sum(
@@ -137,6 +137,7 @@ class CouncilProvider(DecisionProvider):
         )
 
         if chief_output is None:
+            self._last_council_tick = tick
             return
 
         directive = StrategicDirective(
