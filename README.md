@@ -263,7 +263,7 @@ City home tiles are protected from reversion — a city can never lose its own f
 
 Growth rate is dynamic rather than fixed. Each tick a city grows by `rate_max × food_ratio × demo_factor`, where `food_ratio` is how full the city tile is relative to half-capacity, and `demo_factor` falls linearly as total civilization population approaches 3,000 (floored at 0.1× so growth never fully stops). This reproduces the demographic transition: small, resource-rich civilizations expand rapidly; large, land-saturated ones stagnate.
 
-When a city's population hits the cap (500 by default) it automatically sends settlers to found a daughter city on the nearest unclaimed frontier tile at least 6 tiles from any existing city. Settling depletes 50% of the food on tiles within radius 3 of the new site, creating a local resource shock that prevents immediate chaining. A 50-tick cooldown applies before the same city can settle again. Each civilization is capped at 8 cities from voluntary founding, though military conquest can push the count higher.
+When a city's population hits the cap (500 by default) it automatically sends settlers to found a daughter city on the nearest unclaimed frontier tile at least 6 tiles from any existing city. Settling depletes 50% of the food on tiles within radius 3 of the new site, creating a local resource shock that prevents immediate chaining. A 50-tick cooldown applies before the same city can settle again. Each civilization is capped at 20 cities from voluntary founding, though military conquest can push the count higher.
 
 ### Combat and city capture
 

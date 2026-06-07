@@ -43,7 +43,7 @@ class SimConfig:
     capture_threshold: float = 0.3   # city captured when pop < initial_pop × this
     settle_cooldown: int = 50        # ticks a city must wait before settling again
     settle_land_drain: float = 0.5   # fraction of food drained on tiles near a new city
-    max_cities_per_civ: int = 8      # hard ceiling on city count per civilization
+    max_cities_per_civ: int = 20     # hard ceiling on city count per civilization
     # Military
     initial_military: int = 10
     military_upkeep: float = 0.02    # food per military unit per tick
