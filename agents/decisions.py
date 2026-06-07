@@ -79,8 +79,8 @@ def _resource_modifier(action: str, agent: "CityAgent") -> float:
         # Only when we have military advantage
         civ_mil = agent.civ.total_military
         enemy_mil = _enemy_military(agent)
-        if civ_mil > enemy_mil * 1.2:
-            return 0.3
+        if civ_mil > enemy_mil * 0.8:    # was 1.2 — any slight edge is enough
+            return 0.5                    # was 0.3
         return -0.5   # Penalise suicidal attacks
     if action == RESEARCH:
         # Need surplus wood + minerals

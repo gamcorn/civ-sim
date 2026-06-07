@@ -193,3 +193,24 @@ def test_feasible_excludes_research_when_resources_low():
     city = make_mock_city(wood=5.0, minerals=3.0)
     feasible = get_feasible_actions(city)
     assert RESEARCH not in feasible
+
+
+# ---------------------------------------------------------------------------
+# _resource_modifier — attack (lowered threshold)
+# ---------------------------------------------------------------------------
+
+
+def test_attack_modifier_positive_with_slight_military_advantage():
+    """civ_mil > enemy * 0.8 (equal strength qualifies) → +0.5 modifier."""
+    city = make_mock_city(military=20, enemy_military=20)
+    # civ.total_military=20, enemy.total_military=20 → 20 > 20*0.8=16 → True
+    modifier = _resource_modifier(ATTACK, city)
+    assert modifier == 0.5, f"Expected 0.5, got {modifier}"
+
+
+def test_attack_modifier_negative_when_clearly_outgunned():
+    """civ_mil not > enemy * 0.8 → -0.5 modifier discourages suicidal attack."""
+    city = make_mock_city(military=10, enemy_military=20)
+    # 10 > 20*0.8=16 → False
+    modifier = _resource_modifier(ATTACK, city)
+    assert modifier == -0.5, f"Expected -0.5, got {modifier}"
