@@ -9,6 +9,7 @@ import numpy as np
 from config import SimConfig
 from world.grid import ResourceGrid
 from world.events import EventSampler
+from world.resources import ResourceType
 from agents.civilization import Civilization, CulturalTraits
 from agents.city import CityAgent
 from technology.discovery import TechEngine
@@ -47,14 +48,19 @@ class CivModel(mesa.Model):
         # Climate-shift counter (ticks remaining with reduced food regen)
         self._climate_penalty_ticks: int = 0
 
+        # Epidemic log for visualization: list of (tick, beta)
+        self._epidemic_log: list[tuple[int, float]] = []
+
         # History for visualization
-        self.history: dict[str, list] = {
-            "tick": [],
-            "pop_0": [],
-            "pop_1": [],
-            "mil_0": [],
-            "mil_1": [],
-        }
+        self.history: dict[str, list] = {"tick": []}
+        for i in range(config.num_civs):
+            self.history[f"pop_{i}"] = []
+            self.history[f"mil_{i}"] = []
+            self.history[f"cities_{i}"] = []
+            self.history[f"food_civ_{i}"] = []
+        self.history["food_total"] = []
+        self.history["minerals_total"] = []
+        self.history["wood_total"] = []
 
     # ------------------------------------------------------------------
 
@@ -109,10 +115,22 @@ class CivModel(mesa.Model):
                 )
 
         # 8. Record history snapshot
+        food_layer = self.grid.layers[ResourceType.FOOD].data
+        min_layer  = self.grid.layers[ResourceType.MINERALS].data
+        wood_layer = self.grid.layers[ResourceType.WOOD].data
+        ownership  = self.grid.ownership
         self.history["tick"].append(self.steps)
+        self.history["food_total"].append(float(food_layer.sum()))
+        self.history["minerals_total"].append(float(min_layer.sum()))
+        self.history["wood_total"].append(float(wood_layer.sum()))
         for i, civ in enumerate(self.civilizations):
+            mask = ownership == i
             self.history[f"pop_{i}"].append(civ.total_pop)
             self.history[f"mil_{i}"].append(civ.total_military)
+            self.history[f"food_civ_{i}"].append(float(food_layer[mask].sum()))
+            self.history[f"cities_{i}"].append(
+                sum(1 for a in self.agents if isinstance(a, CityAgent) and a.civ is civ)
+            )
 
         # 9. Write snapshot if interval is configured
         if self._snapshot_writer and self.steps % self.config.snapshot_interval == 0:
@@ -162,6 +180,7 @@ class CivModel(mesa.Model):
         cities = [a for a in self.agents if isinstance(a, CityAgent)]
         base_rate = self.config.pop_starvation_rate  # ~4% base
 
+        self._epidemic_log.append((self.steps, beta))
         for city in cities:
             # Count same-civ cities within 20 tiles — dense networks spread disease faster
             nearby = sum(
@@ -174,6 +193,7 @@ class CivModel(mesa.Model):
             mortality = min(0.85, beta * base_rate * proximity_factor)
             hit = math.ceil(city.population * mortality)
             city.population = max(1, city.population - hit)
+            city._disease_hit_ticks = 8  # show disease overlay for 8 ticks
 
     def _apply_border_reversion(self) -> None:
         """Tiles at the border of two civs revert to unclaimed with border_reversion_prob."""

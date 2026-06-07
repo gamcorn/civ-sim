@@ -32,6 +32,7 @@ class CityAgent(Grid2DMovingAgent):
         self.age: int = 0
         self._pending_action: str | None = None
         self._settle_cooldown: int = 0  # ticks until this city can settle again
+        self._disease_hit_ticks: int = 0  # ticks remaining to show disease overlay
 
         # Claim starting tile
         model.grid.claim(x, y, civ.civ_id)
@@ -40,6 +41,8 @@ class CityAgent(Grid2DMovingAgent):
 
     def step(self) -> None:
         self.age += 1
+        if self._disease_hit_ticks > 0:
+            self._disease_hit_ticks -= 1
         self._consume_resources()
         if self.population <= 0:
             self._collapse()
