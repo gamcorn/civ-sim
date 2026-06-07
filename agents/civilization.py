@@ -51,6 +51,11 @@ class Civilization:
         self.discovered_techs: set[str] = set()
         self.alive: bool = True
 
+        # Council emergency tracking — updated by CouncilProvider after each directive
+        self._pop_at_last_directive: int = 0
+        self._techs_at_last_directive: int = 0
+        self._city_count_at_last_directive: int = 0
+
     def update_aggregates(self, cities: list) -> None:
         self.total_pop = sum(c.population for c in cities)
         self.total_military = sum(c.military for c in cities)
