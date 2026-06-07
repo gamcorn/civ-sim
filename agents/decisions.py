@@ -89,7 +89,9 @@ def _resource_modifier(action: str, agent: "CityAgent") -> float:
         defense = _territorial_threat(agent) * 0.8
         return military_mod + desperation + defense
     if action == RESEARCH:
-        # Need surplus wood + minerals
+        from technology.discovery import TECH_TREE
+        if len(agent.civ.discovered_techs) >= len(TECH_TREE):
+            return -1.0  # nothing left to discover
         return (wood / max_r + min_ratio) * 0.3 - 0.1
 
     return 0.0
