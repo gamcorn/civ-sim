@@ -21,8 +21,22 @@ cd civ-sim
 
 python3 -m venv .venv
 source .venv/bin/activate
+```
 
+Install all dependencies (recommended):
+
+```bash
 pip install -r requirements.txt
+```
+
+Or install only what you need using the optional dependency groups:
+
+```bash
+pip install -e .               # core only (no visualization, no Ray sweep)
+pip install -e ".[viz]"        # + matplotlib live map
+pip install -e ".[sweep]"      # + Ray for parameter sweeps
+pip install -e ".[dev]"        # + pytest for development
+pip install -e ".[all]"        # everything
 ```
 
 Verify the install:
@@ -51,6 +65,14 @@ python main.py --seed 42 --ticks 500
 
 A matplotlib window opens showing territory ownership, food levels, and population/military charts updated each tick.
 
+### Terminal map (SSH / headless)
+
+```bash
+python main.py --seed 42 --ticks 500 --terminal-viz
+```
+
+Renders the world directly in the terminal using ANSI color codes — no display server needed. Shows a color-coded territory map, per-civilization stats (population, military, food, territory, top actions), and a population bar per civilization. Falls back to this renderer automatically if matplotlib cannot open a display window.
+
 ### Query results
 
 ```bash
@@ -69,7 +91,8 @@ duckdb results.duckdb "SELECT action, count(*) FROM events GROUP BY action ORDER
 | `--height INT` | 60 | Grid height |
 | `--cities INT` | 4 | Cities per civilization |
 | `--db PATH` | results.duckdb | DuckDB output file |
-| `--no-visualize` | off | Disable live map |
+| `--no-visualize` | off | Disable all visualization |
+| `--terminal-viz` | off | ANSI terminal renderer — works over SSH without a display |
 | `--sweep` | off | Run Ray parameter sweep |
 | `--n-runs INT` | 100 | Runs for sweep |
 | `--output PATH` | sweep.duckdb | Sweep results file |
@@ -78,6 +101,12 @@ duckdb results.duckdb "SELECT action, count(*) FROM events GROUP BY action ORDER
 | `--base-url URL` | http://localhost:8000/v1 | Endpoint for OpenAI-compatible provider |
 | `--api-key STR` | EMPTY | API key (use EMPTY for local vLLM/Ollama) |
 | `--config PATH` | — | YAML file with per-civilization provider config |
+| `--batch-mode` | off | Send all prompts in one `/v1/completions` call (vLLM DGX mode) |
+| `--max-concurrent INT` | 64 | Max concurrent LLM requests when batch-mode is off |
+| `--prompt-template STR` | — | Chat template for completions API (`{system}` / `{user}` placeholders); defaults to Llama-3.1 format |
+| `--workers INT` | 0 | Ray worker processes for sweep (0 = one per CPU core) |
+| `--grid-backend STR` | numpy | Array backend for resource grid: `numpy` or `cupy` |
+| `--snapshot-interval INT` | 0 | Write a world snapshot every N ticks for later replay (0 = off) |
 
 ---
 
@@ -152,12 +181,69 @@ The LLM provider falls back silently to rule-based logic on any timeout, API err
 
 ---
 
+## Replay
+
+Long simulations can be replayed after the fact by writing periodic world snapshots during the run and playing them back interactively with `replay.py`.
+
+### Step 1 — Run with snapshots enabled
+
+Add `--snapshot-interval N` to write a full world snapshot every N ticks:
+
+```bash
+python main.py --seed 42 --ticks 5000 --no-visualize \
+  --snapshot-interval 50 --db run.duckdb
+```
+
+This stores grid state (territory ownership + food levels), city positions, population, military, and civilization state as rows in the same `run.duckdb` file alongside the event log. A 5000-tick run at interval 50 writes ~100 snapshots — typically a few megabytes.
+
+### Step 2 — Replay
+
+```bash
+python replay.py run.duckdb
+```
+
+The renderer is chosen automatically: matplotlib if `$DISPLAY` is set, terminal otherwise.
+
+**Options:**
+
+```bash
+python replay.py run.duckdb --renderer terminal     # force terminal
+python replay.py run.duckdb --renderer matplotlib   # force matplotlib
+python replay.py run.duckdb --from-tick 2000        # start near tick 2000
+python replay.py run.duckdb --speed 4               # start at 4× speed
+```
+
+### Keyboard controls
+
+| Key | Action |
+|---|---|
+| `Space` | Pause / resume |
+| `+` / `=` | Double playback speed (max 32×) |
+| `-` | Halve playback speed (min 0.125×) |
+| `→` | Skip forward 10 snapshots |
+| `←` | Skip back 10 snapshots |
+| `q` | Quit |
+
+### Inspect snapshots directly
+
+```bash
+duckdb run.duckdb "SELECT tick, width, height FROM snapshots ORDER BY tick"
+```
+
+---
+
 ## Parameter Sweep
 
 Run many seeds in parallel with Ray and collect results into a single DuckDB file:
 
 ```bash
 python main.py --sweep --n-runs 1000 --output sweep.duckdb --no-visualize
+```
+
+Control parallelism explicitly (useful on shared machines):
+
+```bash
+python main.py --sweep --n-runs 1000 --workers 8 --output sweep.duckdb --no-visualize
 ```
 
 Analyze results:
@@ -176,13 +262,51 @@ duckdb sweep.duckdb "
 
 ---
 
+## DGX Spark / Multi-GPU
+
+Two extra flags squeeze more throughput out of a DGX Spark node.
+
+**Batch LLM inference** — sends all city prompts in a single `/v1/completions` request instead of N concurrent chat calls. vLLM schedules them as a true GPU batch, eliminating N-1 HTTP round-trips per tick:
+
+```bash
+python main.py --ticks 200 --no-visualize \
+  --provider openai_compatible \
+  --model meta-llama/Llama-3.1-70B-Instruct \
+  --base-url http://localhost:8000/v1 \
+  --batch-mode
+```
+
+**GPU resource grid** — moves all NumPy array operations (terrain, resource regeneration, territory tracking) onto the GPU via CuPy. Install CuPy first:
+
+```bash
+pip install cupy-cuda12x   # match your CUDA version
+```
+
+Then pass `--grid-backend cupy` to any run or sweep:
+
+```bash
+python main.py --seed 42 --ticks 500 --no-visualize --grid-backend cupy
+```
+
+Both flags can be combined. For a full DGX sweep:
+
+```bash
+python main.py --sweep --n-runs 10000 --output dgx_sweep.duckdb \
+  --no-visualize --grid-backend cupy \
+  --provider openai_compatible \
+  --model meta-llama/Llama-3.1-70B-Instruct \
+  --batch-mode
+```
+
+---
+
 ## Tests
 
 ```bash
 python -m pytest tests/ -v
 ```
 
-All 32 tests should pass. The test suite covers the decision engine, all three LLM providers (mocked), the provider factory, and the model dispatch loop.
+All 195 tests should pass. The suite covers the grid, events, logger, civilization state, decision engine, city actions and lifecycle, tech tree, all three LLM providers (mocked), provider factory, model dispatch loop, batch completions path, Ray sweep runner, grid backend abstraction, snapshot writer/reader round-trips, CivModel snapshot integration, and replay player helpers and renderer duck-typing.
 
 ---
 
@@ -200,8 +324,9 @@ civ-sim/
 │   └── providers/        # Swappable LLM / rule-based backends
 ├── technology/           # Emergent tech tree
 ├── simulation/           # Mesa model + Ray sweep runner
-├── storage/              # DuckDB event logger
-├── visualization/        # Live matplotlib renderer
+├── storage/              # DuckDB event logger + snapshot writer/reader
+├── visualization/        # Live matplotlib + ANSI terminal renderers
+├── replay.py             # Interactive replay player for completed runs
 └── tests/                # pytest suite
 ```
 
