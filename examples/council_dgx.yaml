@@ -1,0 +1,26 @@
+# examples/council_dgx.yaml
+# Council-based leader for both civs — run after scripts/setup_llm.sh
+#
+# Usage:
+#   .venv/bin/python main.py --ticks 200 --no-visualize --config examples/council_dgx.yaml
+
+civ_providers:
+  - type: council
+    model: nvidia/Llama-3.1-Nemotron-70B-Instruct-HF
+    base_url: http://localhost:8000/v1
+    api_key: EMPTY
+    timeout: 30.0
+    directive_period: 10
+    max_rounds: 2
+    emergency_triggers: true
+    emergency_cooldown_ticks: 3
+
+  - type: council
+    model: nvidia/Llama-3.1-Nemotron-70B-Instruct-HF
+    base_url: http://localhost:8000/v1
+    api_key: EMPTY
+    timeout: 30.0
+    directive_period: 10
+    max_rounds: 2
+    emergency_triggers: true
+    emergency_cooldown_ticks: 3
