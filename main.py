@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--terminal-viz",   action="store_true",
                    help="Use ANSI terminal renderer instead of matplotlib (works over SSH)")
     p.add_argument("--provider",  type=str, default=None,
-                   choices=["rule_based", "openai_compatible", "anthropic"],
+                   choices=["rule_based", "openai_compatible", "anthropic", "council"],
                    help="Decision provider for all civs")
     p.add_argument("--model",     type=str,
                    default="meta-llama/Llama-3.1-70B-Instruct",

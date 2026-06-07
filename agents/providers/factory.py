@@ -21,5 +21,9 @@ def create_provider(config: "ProviderConfig") -> DecisionProvider:
         from agents.providers.anthropic_provider import AnthropicProvider
         return AnthropicProvider(config)
 
+    if config.type == "council":
+        from agents.providers.council_provider import CouncilProvider
+        return CouncilProvider(config)
+
     raise ValueError(f"Unknown provider type: {config.type!r}. "
-                     f"Choose: rule_based, openai_compatible, anthropic")
+                     f"Choose: rule_based, openai_compatible, anthropic, council")
