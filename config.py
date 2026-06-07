@@ -56,6 +56,7 @@ class SimConfig:
     # Logging
     db_path: str = "results.duckdb"
     db_flush_interval: int = 10
+    snapshot_interval: int = 0   # 0 = disabled; write snapshot every N ticks
     # Visualization
     visualize: bool = True
     viz_interval_ms: int = 100

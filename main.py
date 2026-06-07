@@ -21,7 +21,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--height",       type=int, default=60)
     p.add_argument("--cities",       type=int, default=4, help="Cities per civ")
     p.add_argument("--db",           type=str, default="results.duckdb")
-    p.add_argument("--no-visualize", action="store_true")
+    p.add_argument("--snapshot-interval", type=int, default=0,
+                   metavar="N",
+                   help="Write a world snapshot every N ticks to the DB (0 = off)")
+    p.add_argument("--no-visualize",   action="store_true")
+    p.add_argument("--terminal-viz",   action="store_true",
+                   help="Use ANSI terminal renderer instead of matplotlib (works over SSH)")
     p.add_argument("--provider",  type=str, default=None,
                    choices=["rule_based", "openai_compatible", "anthropic"],
                    help="Decision provider for all civs")
@@ -63,6 +68,7 @@ def main():
         height=args.height,
         cities_per_civ=args.cities,
         db_path=args.db,
+        snapshot_interval=args.snapshot_interval,
         visualize=not args.no_visualize,
         num_sweep_workers=args.workers,
         grid_backend=args.grid_backend,
@@ -106,13 +112,24 @@ def main():
     model = CivModel(cfg)
     renderer = None
 
-    if cfg.visualize:
+    if args.terminal_viz:
+        try:
+            from visualization.terminal_renderer import TerminalRenderer
+            renderer = TerminalRenderer(model)
+        except Exception as e:
+            print(f"[warn] Terminal visualization failed: {e}", file=sys.stderr)
+    elif cfg.visualize:
         try:
             from visualization.renderer import Renderer
             renderer = Renderer(model)
         except Exception as e:
-            print(f"[warn] Visualization disabled: {e}", file=sys.stderr)
-            cfg.visualize = False
+            print(f"[warn] matplotlib display unavailable ({e}); falling back to terminal view",
+                  file=sys.stderr)
+            try:
+                from visualization.terminal_renderer import TerminalRenderer
+                renderer = TerminalRenderer(model)
+            except Exception as e2:
+                print(f"[warn] Terminal visualization also failed: {e2}", file=sys.stderr)
 
     print(f"Seed={cfg.rng_seed}  Grid={cfg.width}×{cfg.height}  "
           f"Cities/civ={cfg.cities_per_civ}  MaxTicks={cfg.max_ticks}")
