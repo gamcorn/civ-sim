@@ -149,15 +149,6 @@ def replay_terminal(reader, from_tick: int, speed: float) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Matplotlib replay path (implemented in Task 8)
-# ---------------------------------------------------------------------------
-
-
-def replay_matplotlib(reader, from_tick: int, speed: float) -> None:
-    raise NotImplementedError("matplotlib replay is implemented in Task 8")
-
-
-# ---------------------------------------------------------------------------
 # Imports for matplotlib path (Task 8 will replace the stub above)
 # ---------------------------------------------------------------------------
 
@@ -168,6 +159,62 @@ try:
     _MPL_AVAILABLE = True
 except Exception:
     _MPL_AVAILABLE = False
+
+
+# ---------------------------------------------------------------------------
+# Matplotlib replay path (implemented in Task 8)
+# ---------------------------------------------------------------------------
+
+
+def replay_matplotlib(reader, from_tick: int, speed: float) -> None:
+    if not _MPL_AVAILABLE:
+        print("matplotlib is not available. Use --renderer terminal.", file=sys.stderr)
+        return
+
+    ticks = reader.ticks()
+    if not ticks:
+        print("No snapshots found in this database.", file=sys.stderr)
+        return
+
+    state = {
+        "idx": _nearest_idx(ticks, from_tick),
+        "paused": False,
+        "speed": speed,
+        "quit": False,
+    }
+
+    first_frame = reader.load(ticks[state["idx"]])
+    renderer = Renderer(first_frame)
+
+    def _on_key(event) -> None:
+        key_map = {
+            " ": "space", "+": "+", "=": "+", "-": "-",
+            "right": "right", "left": "left", "q": "q",
+        }
+        k = key_map.get(event.key)
+        if k:
+            _apply_key(k, state, len(ticks))
+        if state["quit"]:
+            plt.close("all")
+
+    renderer.fig.canvas.mpl_connect("key_press_event", _on_key)
+
+    def _animate(_frame_num) -> None:
+        if state["quit"] or state["paused"]:
+            return
+        frame = reader.load(ticks[state["idx"]])
+        renderer.update(frame)
+        state["idx"] = min(len(ticks) - 1, state["idx"] + 1)
+        if state["idx"] == len(ticks) - 1:
+            state["paused"] = True
+
+    interval_ms = int(1000.0 / max(state["speed"], 0.125))
+    _anim = FuncAnimation(
+        renderer.fig, _animate,
+        interval=interval_ms, cache_frame_data=False,
+    )
+
+    plt.show(block=True)
 
 
 # ---------------------------------------------------------------------------
