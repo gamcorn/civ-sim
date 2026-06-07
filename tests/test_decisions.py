@@ -150,12 +150,12 @@ def test_attack_target_returns_nearest_enemy_within_10():
     assert result is enemy
 
 
-def test_attack_target_returns_none_when_only_enemy_beyond_10():
-    """An enemy at distance 15 is outside the 10-tile radius → None."""
+def test_attack_target_returns_none_when_only_enemy_beyond_25():
+    """An enemy at distance 30 is outside the 25-tile radius → None."""
     city = make_mock_city()
     enemy = MagicMock()
     enemy.civ.civ_id = 1
-    enemy.x = 25  # |25-10| = 15
+    enemy.x = 40  # |40-10| = 30
     enemy.y = 10
     city.model.agents_by_type = {type(city): [enemy]}
     result = _attack_target(city)

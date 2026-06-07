@@ -130,7 +130,7 @@ def _has_trade_partner(agent: "CityAgent") -> bool:
     for other in agent.model.agents_by_type.get(type(agent), []):
         if other.civ.civ_id != agent.civ.civ_id:
             dist = abs(other.x - agent.x) + abs(other.y - agent.y)
-            if dist <= 15:
+            if dist <= 30:
                 return True
     return False
 
@@ -147,9 +147,9 @@ def _has_unclaimed_neighbor(agent: "CityAgent") -> bool:
 
 
 def _attack_target(agent: "CityAgent"):
-    """Return the nearest enemy city within 10 tiles, or None."""
+    """Return the nearest enemy city within 25 tiles, or None."""
     best = None
-    best_dist = 11
+    best_dist = 26
     for other in agent.model.agents_by_type.get(type(agent), []):
         if other.civ.civ_id != agent.civ.civ_id:
             dist = abs(other.x - agent.x) + abs(other.y - agent.y)

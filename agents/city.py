@@ -119,7 +119,7 @@ class CityAgent(Grid2DMovingAgent):
             if other is not self and dist < best_dist:
                 best_dist = dist
                 best = other
-        if best and best_dist <= 15:
+        if best and best_dist <= 30:
             grid.consume(self.x, self.y, ResourceType.FOOD, surplus)
             grid.deposit(best.x, best.y, ResourceType.FOOD, surplus * 0.7)
             # Receive minerals in return
