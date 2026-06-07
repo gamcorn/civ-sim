@@ -184,10 +184,4 @@ def _attack_target(agent: "CityAgent"):
 
 def get_feasible_actions(agent: "CityAgent") -> list[str]:
     """Return the list of action names feasible for this city right now."""
-    t = agent.civ.traits.as_dict()
-    scores: dict[str, float] = {}
-    for action in ALL_ACTIONS:
-        base = sum(_WEIGHTS[action][k] * t[k] for k in t)
-        modifier = _resource_modifier(action, agent)
-        scores[action] = base + modifier
-    return list(_feasible(agent, scores).keys())
+    return list(_feasible(agent, get_action_scores(agent)).keys())
