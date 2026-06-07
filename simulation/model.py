@@ -177,10 +177,13 @@ class CivModel(mesa.Model):
                 if other.civ_id == civ.civ_id:
                     continue
                 e = (snap == other.civ_id)
-                enemy_adj |= (
-                    np.roll(e, 1, axis=0) | np.roll(e, -1, axis=0) |
-                    np.roll(e, 1, axis=1) | np.roll(e, -1, axis=1)
-                )
+                # Orthogonal neighbor detection without edge wrapping
+                e_adj = np.zeros(ownership.shape, dtype=bool)
+                e_adj[1:, :]  |= e[:-1, :]   # neighbor above
+                e_adj[:-1, :] |= e[1:, :]    # neighbor below
+                e_adj[:, 1:]  |= e[:, :-1]   # neighbor left
+                e_adj[:, :-1] |= e[:, 1:]    # neighbor right
+                enemy_adj |= e_adj
             border = owned & enemy_adj
             revert_mask |= border & rolls
         ownership[revert_mask] = -1
