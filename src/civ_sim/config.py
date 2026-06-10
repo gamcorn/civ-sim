@@ -80,6 +80,8 @@ class SimConfig:
     # War economy
     max_defense_military: float = 100.0
     fortify_defense_bonus: float = 0.8
+    max_fortification: float = 100.0      # cap for city.fortification
+    fortification_decay: float = 0.005    # per-tick fractional decay of fortification
     battle_pillage_rate: float = 0.25
     capture_reconstruct_wood: float = 15.0
     capture_reconstruct_mineral: float = 10.0
@@ -137,6 +139,8 @@ class SimConfig:
     # War economy
     max_defense_military: float = 100.0
     fortify_defense_bonus: float = 0.8
+    max_fortification: float = 100.0      # cap for city.fortification
+    fortification_decay: float = 0.005    # per-tick fractional decay of fortification
     battle_pillage_rate: float = 0.25
     capture_reconstruct_wood: float = 15.0
     capture_reconstruct_mineral: float = 10.0

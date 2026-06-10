@@ -87,23 +87,48 @@ def test_do_expand_no_op_when_all_tiles_claimed(mini_model):
 # _do_fortify
 # ---------------------------------------------------------------------------
 
-def test_do_fortify_increases_military(mini_model):
-    """Fortifying with minerals + wood on the city tile should increase military."""
+def test_do_fortify_increases_fortification(mini_model):
+    """Fortifying with minerals + wood increases city.fortification, not military."""
     cities = _get_cities(mini_model)
     city = cities[0]
+    city.mineral_stock = 50.0
+    city.wood_stock = 50.0
 
-    # Ensure enough minerals and wood on the city tile
-    mini_model.grid.deposit(city.x, city.y, ResourceType.MINERALS, 50.0)
-    mini_model.grid.deposit(city.x, city.y, ResourceType.WOOD, 50.0)
-
+    fort_before = city.fortification
     mil_before = city.military
     city._do_fortify()
-    assert city.military >= mil_before, (
-        f"military should not decrease after _do_fortify; was {mil_before}, now {city.military}"
+
+    assert city.fortification > fort_before, (
+        f"fortification should increase after _do_fortify; was {fort_before:.1f}"
     )
-    # Also verify it actually increased (we deposited plenty of resources)
-    assert city.military > mil_before, (
-        f"military should increase when minerals/wood are available; was {mil_before}, now {city.military}"
+    assert city.military == mil_before, (
+        f"military must NOT change on _do_fortify; was {mil_before}, now {city.military}"
+    )
+
+
+def test_fortification_reduces_pillage_damage(mini_config):
+    """Attacker pillages less from a city with high fortification vs zero."""
+    from civ_sim.simulation.model import CivModel
+
+    def _run(fortification_level: float) -> float:
+        m = CivModel(mini_config)
+        cities = [a for a in m.agents if isinstance(a, CityAgent)]
+        attacker, defender = cities[0], cities[1]
+        attacker.military = 1000
+        attacker.mineral_stock = 50.0
+        defender.military = 1
+        defender.fortification = fortification_level
+        defender.food_stock = 200.0
+        m.random.seed(0)
+        food_before = defender.food_stock
+        attacker._do_attack()
+        return food_before - defender.food_stock
+
+    loss_no_fort   = _run(0.0)
+    loss_with_fort = _run(mini_config.max_fortification)
+
+    assert loss_with_fort < loss_no_fort, (
+        f"Fortification should reduce pillage; no_fort_loss={loss_no_fort:.1f} fort_loss={loss_with_fort:.1f}"
     )
 
 

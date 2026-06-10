@@ -35,6 +35,7 @@ class CityAgent(Grid2DMovingAgent):
         self._pending_action: str | None = None
         self._settle_cooldown: int = 0  # ticks until this city can settle again
         self._disease_hit_ticks: int = 0  # ticks remaining to show disease overlay
+        self.fortification: float = 0.0  # defensive structures (built by fortify, decays)
 
         # Claim starting tile
         model.grid.claim(x, y, civ.civ_id)
@@ -97,6 +98,9 @@ class CityAgent(Grid2DMovingAgent):
         if self.model.random.random() < (decay_f - decay):
             decay += 1
         self.military = max(0, self.military - decay)
+
+        # Fortification erodes slowly each tick
+        self.fortification = max(0.0, self.fortification * (1.0 - self.model.config.fortification_decay))
 
     def _grow_population(self) -> None:
         cfg = self.model.config
@@ -227,7 +231,8 @@ class CityAgent(Grid2DMovingAgent):
         consumed_w = min(self.wood_stock, cfg.fortify_wood_cost)
         self.mineral_stock -= consumed_m
         self.wood_stock -= consumed_w
-        self.military += int((consumed_m + consumed_w) / 2)
+        gain = (consumed_m + consumed_w) / 2
+        self.fortification = min(cfg.max_fortification, self.fortification + gain)
 
     def _do_attack(self) -> None:
         cfg = self.model.config
@@ -239,7 +244,7 @@ class CityAgent(Grid2DMovingAgent):
 
         self.mineral_stock = max(0.0, self.mineral_stock - cfg.attack_mineral_cost)
 
-        fort_factor = min(1.0, target.military / cfg.max_defense_military)
+        fort_factor = min(1.0, target.fortification / cfg.max_fortification)
         damage_factor = 1.0 - fort_factor * cfg.fortify_defense_bonus
 
         self.model._attack_events.append(
