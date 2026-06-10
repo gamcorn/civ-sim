@@ -13,6 +13,7 @@ def make_mock_city(
     enemy_military=20, tick=10,
     techs=None, territory=50,
     wood=30.0, minerals=20.0,
+    wood_stock=30.0, mineral_stock=20.0,
     has_unclaimed_neighbor=True,
     has_trade_partner=False,
 ):
@@ -77,6 +78,10 @@ def make_mock_city(
     model.config.resource_max = 100.0
     model.config.harvest_radius = 5
     model.config.fog_of_war = 0.0
+    model.config.expand_wood_cost = 5.0
+    model.config.research_wood_cost = 8.0
+    model.config.research_mineral_cost = 5.0
+    model.config.attack_mineral_cost = 3.0
     model.grid = grid
     model.civilizations = [civ, enemy_civ]
     # agents_by_type returns empty by default (no trade partners, no attack targets)
@@ -88,6 +93,8 @@ def make_mock_city(
     city.population = pop
     city.military = military
     city.food_stock = food_stock
+    city.wood_stock = wood_stock
+    city.mineral_stock = mineral_stock
     city.x = 10
     city.y = 10
     city._pending_action = None

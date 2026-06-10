@@ -105,31 +105,34 @@ def _enemy_military(agent: "CityAgent") -> int:
 
 
 def _feasible(agent: "CityAgent", scores: dict[str, float]) -> dict[str, float]:
+    cfg = agent.model.config
     feasible = {GATHER: scores[GATHER]}  # always available
 
-    # Trade: needs at least one reachable enemy city
+    # Trade: needs at least one reachable city (any civ)
     if _has_trade_partner(agent):
         feasible[TRADE] = scores[TRADE]
 
-    # Expand: needs unclaimed adjacent tile
-    if _has_unclaimed_neighbor(agent):
+    # Expand: needs unclaimed adjacent tile AND wood to pay the cost
+    if _has_unclaimed_neighbor(agent) and agent.wood_stock >= cfg.expand_wood_cost:
         feasible[EXPAND] = scores[EXPAND]
 
-    # Fortify: always possible
+    # Fortify: always possible (scales with what's actually consumed)
     feasible[FORTIFY] = scores[FORTIFY]
 
-    # Territorial defenders can attack with less military than normal aggressors
+    # Attack: needs a target, minimum military, AND minerals to pay the cost
     mil_threshold = 2 if _territorial_threat(agent) > 0.1 else 5
-    if _attack_target(agent) is not None and agent.military >= mil_threshold:
+    if (
+        _attack_target(agent) is not None
+        and agent.military >= mil_threshold
+        and agent.mineral_stock >= cfg.attack_mineral_cost
+    ):
         feasible[ATTACK] = scores[ATTACK]
 
-    # Research: needs minimal wood and minerals
-    from civ_sim.world.resources import ResourceType
-    has_resources = (
-        agent.model.grid.get(agent.x, agent.y, ResourceType.WOOD) > 10
-        and agent.model.grid.get(agent.x, agent.y, ResourceType.MINERALS) > 5
-    )
-    if has_resources:
+    # Research: needs stockpile to cover the action cost
+    if (
+        agent.wood_stock >= cfg.research_wood_cost
+        and agent.mineral_stock >= cfg.research_mineral_cost
+    ):
         feasible[RESEARCH] = scores[RESEARCH]
 
     return feasible
