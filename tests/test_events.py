@@ -1,5 +1,6 @@
 import random
 import pytest
+from unittest.mock import patch
 from civ_sim.config import SimConfig
 from civ_sim.world.events import EventSampler
 from civ_sim.world.grid import ResourceGrid
@@ -107,4 +108,24 @@ def test_climate_shift_reduces_regen_not_tile_data(mini_model):
     full_regen = mini_model.config.food_regen * mini_model.config.resource_max * mini_model.grid.width * mini_model.grid.height
     assert (food_after - food_before) < full_regen, (
         "Climate-penalised regen should be less than full regen"
+    )
+
+
+def test_model_computes_climate_penalty_multiplier(mini_model):
+    """When _climate_penalty_ticks > 0, model.step() must call grid.step() with food_regen_mult=0.85."""
+    mini_model._climate_penalty_ticks = 3
+
+    captured_mult = []
+    original_step = mini_model.grid.step
+
+    def capturing_step(food_regen_mult=1.0):
+        captured_mult.append(food_regen_mult)
+        return original_step(food_regen_mult=food_regen_mult)
+
+    with patch.object(mini_model.grid, "step", side_effect=capturing_step):
+        mini_model.step()
+
+    assert captured_mult, "grid.step() should have been called during model.step()"
+    assert captured_mult[0] == pytest.approx(0.85), (
+        f"grid.step() should receive food_regen_mult=0.85 when penalty active; got {captured_mult[0]}"
     )

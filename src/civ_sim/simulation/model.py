@@ -70,10 +70,14 @@ class CivModel(mesa.Model):
     def step(self) -> None:
         self._attack_events = []
 
-        # Compute climate penalty for this tick's regen BEFORE grid.step()
-        food_regen_mult = 0.85 if self._climate_penalty_ticks > 0 else 1.0
+        # Compute climate penalty for this tick's regen BEFORE grid.step().
+        # The counter is set to 20 when the event fires (at end of the same tick),
+        # so the penalty begins the following tick and lasts exactly 20 ticks.
         if self._climate_penalty_ticks > 0:
+            food_regen_mult = 0.85
             self._climate_penalty_ticks -= 1
+        else:
+            food_regen_mult = 1.0
 
         # 1. Resource regeneration (with optional climate dampening)
         self.grid.step(food_regen_mult=food_regen_mult)
