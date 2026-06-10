@@ -139,15 +139,16 @@ class CityAgent(Grid2DMovingAgent):
         grid = self.model.grid
         cfg = self.model.config
         r = cfg.harvest_radius
+        bonus = self.civ.harvest_bonus
         for dx in range(-r, r + 1):
             for dy in range(-r, r + 1):
                 nx, ny = self.x + dx, self.y + dy
                 if 0 <= nx < grid.width and 0 <= ny < grid.height:
                     if grid.ownership[nx, ny] == self.civ.civ_id:
-                        self.food_stock += grid.consume(nx, ny, ResourceType.FOOD, 3.0)
-                        self.food_stock += grid.consume(nx, ny, ResourceType.WATER, 1.0) * 0.5
-                        self.wood_stock += grid.consume(nx, ny, ResourceType.WOOD, 1.0)
-                        self.mineral_stock += grid.consume(nx, ny, ResourceType.MINERALS, 0.5)
+                        self.food_stock += grid.consume(nx, ny, ResourceType.FOOD, 3.0) * bonus
+                        self.food_stock += grid.consume(nx, ny, ResourceType.WATER, 1.0) * 0.5 * bonus
+                        self.wood_stock += grid.consume(nx, ny, ResourceType.WOOD, 1.0) * bonus
+                        self.mineral_stock += grid.consume(nx, ny, ResourceType.MINERALS, 0.5) * bonus
 
     def _do_trade(self) -> None:
         """Transfer surplus food to nearest city (any civ) and receive minerals/wood back."""

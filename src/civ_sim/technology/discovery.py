@@ -66,7 +66,7 @@ class TechEngine:
 
         effects = TECH_EFFECTS.get(tech, {})
         if "food_regen" in effects:
-            city.model.config.food_regen += effects["food_regen"] * 0.01  # small global bump
+            civ.harvest_bonus += effects["food_regen"]   # per-civ, not global config
 
         city.model.logger.log_event(
             tick=city.model.steps,

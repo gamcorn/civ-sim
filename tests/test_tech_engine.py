@@ -144,3 +144,47 @@ def test_discover_logs_event_with_discover_prefix(mini_model):
     assert any("masonry" in a for a in actions), (
         f"Expected a 'discover:masonry' row, got: {actions}"
     )
+
+
+def test_food_tech_does_not_mutate_shared_config(mini_model):
+    """Discovering agriculture must NOT change model.config.food_regen."""
+    from civ_sim.agents.city import CityAgent
+    from civ_sim.world.resources import ResourceType
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    city = cities[0]
+    original_regen = mini_model.config.food_regen
+
+    mini_model.grid.layers[ResourceType.FOOD].data[city.x, city.y] = 100.0
+    mini_model.tech_engine._discover("agriculture", city)
+
+    assert mini_model.config.food_regen == original_regen, (
+        "agriculture must not change shared config.food_regen"
+    )
+    assert city.civ.harvest_bonus > 1.0, (
+        "agriculture should raise civ.harvest_bonus instead"
+    )
+
+
+def test_harvest_bonus_increases_gather_yield(mini_model):
+    """A civ with harvest_bonus > 1 should gather more food."""
+    from civ_sim.agents.city import CityAgent
+    from civ_sim.world.resources import ResourceType
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    city = cities[0]
+    mini_model.grid.layers[ResourceType.FOOD].data[:] = 80.0
+    mini_model.grid.ownership[:] = city.civ.civ_id  # own all tiles
+
+    city.civ.harvest_bonus = 1.0
+    city.food_stock = 0.0
+    city._do_gather()
+    baseline = city.food_stock
+
+    city.civ.harvest_bonus = 2.0
+    city.food_stock = 0.0
+    mini_model.grid.layers[ResourceType.FOOD].data[:] = 80.0
+    city._do_gather()
+    boosted = city.food_stock
+
+    assert boosted > baseline * 1.5, (
+        f"harvest_bonus=2 should yield much more food; baseline={baseline:.1f} boosted={boosted:.1f}"
+    )
