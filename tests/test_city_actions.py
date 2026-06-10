@@ -414,3 +414,22 @@ def test_do_recruit_does_nothing_when_population_too_low(mini_model):
 
     assert city.military == mil_before, "Military must not change when population is at floor"
     assert city.population == pop_before, "Population must not change when at floor"
+
+
+# ---------------------------------------------------------------------------
+# Fortification decay
+# ---------------------------------------------------------------------------
+
+def test_fortification_decays_each_tick(mini_model):
+    """_consume_resources must reduce fortification by the configured decay rate."""
+    cities = _get_cities(mini_model)
+    city = cities[0]
+
+    city.fortification = 50.0
+    fort_before = city.fortification
+    city._consume_resources()
+
+    assert city.fortification < fort_before, (
+        f"fortification should decay after _consume_resources; was {fort_before:.2f}, now {city.fortification:.2f}"
+    )
+    assert city.fortification >= 0.0, "fortification must not go negative"

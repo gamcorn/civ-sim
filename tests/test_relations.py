@@ -97,3 +97,29 @@ def test_trade_blocked_when_relations_below_threshold(mini_model):
     food_before = sender.food_stock
     sender._do_trade()
     assert sender.food_stock == food_before, "Trade should be blocked when relations are very negative"
+
+
+# --- relation decay ---
+
+def test_relation_decay_moves_positive_score_toward_zero(mini_model):
+    civs = mini_model.civilizations
+    mini_model.update_relation(civs[0].civ_id, civs[1].civ_id, 0.5)
+
+    rel_before = mini_model.get_relation(civs[0].civ_id, civs[1].civ_id)
+    mini_model.step()
+    rel_after = mini_model.get_relation(civs[0].civ_id, civs[1].civ_id)
+
+    assert rel_after < rel_before, f"Positive relation should decay toward 0; before={rel_before}, after={rel_after}"
+    assert rel_after >= 0.0, "Positive relation must not decay below 0"
+
+
+def test_relation_decay_moves_negative_score_toward_zero(mini_model):
+    civs = mini_model.civilizations
+    mini_model.update_relation(civs[0].civ_id, civs[1].civ_id, -0.5)
+
+    rel_before = mini_model.get_relation(civs[0].civ_id, civs[1].civ_id)
+    mini_model.step()
+    rel_after = mini_model.get_relation(civs[0].civ_id, civs[1].civ_id)
+
+    assert rel_after > rel_before, f"Negative relation should decay toward 0; before={rel_before}, after={rel_after}"
+    assert rel_after <= 0.0, "Negative relation must not decay above 0"

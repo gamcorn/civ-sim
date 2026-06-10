@@ -75,3 +75,10 @@ def test_parse_response_falls_back_on_empty():
 def test_parse_response_strips_punctuation():
     from civ_sim.agents.providers.prompt import parse_response
     assert parse_response("expand.", ["gather", "expand"], "gather") == "expand"
+
+
+def test_build_prompt_includes_relations_line():
+    from civ_sim.agents.providers.prompt import build_prompt
+    city = make_mock_city(civ_name="Alpha")
+    prompt = build_prompt(city, ["gather"])
+    assert "Relations:" in prompt, "Prompt must include a Relations line for diplomatic context"
