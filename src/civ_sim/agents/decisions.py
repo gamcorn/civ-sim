@@ -140,8 +140,7 @@ def _feasible(agent: "CityAgent", scores: dict[str, float]) -> dict[str, float]:
 
 def _has_trade_partner(agent: "CityAgent") -> bool:
     """True if any other city (any civ) is within trade range."""
-    bonus = getattr(agent.civ, 'trade_range_bonus', 0)
-    trade_range = 30 + (bonus if isinstance(bonus, (int, float)) else 0)
+    trade_range = 30 + agent.civ.trade_range_bonus
     for other in agent.model.agents_by_type.get(type(agent), []):
         if other is not agent:
             dist = abs(other.x - agent.x) + abs(other.y - agent.y)

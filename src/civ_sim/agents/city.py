@@ -169,8 +169,7 @@ class CityAgent(Grid2DMovingAgent):
                 if dist < best_dist:
                     best_dist = dist
                     best = other
-        bonus = getattr(self.civ, 'trade_range_bonus', 0)
-        trade_range = 30 + (bonus if isinstance(bonus, (int, float)) else 0)
+        trade_range = 30 + self.civ.trade_range_bonus
         if best is None or best_dist > trade_range:
             return
 
@@ -235,8 +234,8 @@ class CityAgent(Grid2DMovingAgent):
         self.model._attack_events.append(
             (self.x, self.y, target.x, target.y, self.civ.civ_id)
         )
-        my_str = self.military * (1 + len(self.civ.discovered_techs) * cfg.tech_military_bonus)
-        enemy_str = target.military * (1 + len(target.civ.discovered_techs) * cfg.tech_military_bonus)
+        my_str = self.military * (1 + self.civ.military_tech_bonus)
+        enemy_str = target.military * (1 + target.civ.military_tech_bonus)
         win_prob = my_str / (my_str + enemy_str + 1e-6)
 
         if self.model.random.random() < win_prob:

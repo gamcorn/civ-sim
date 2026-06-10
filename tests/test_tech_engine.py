@@ -247,3 +247,31 @@ def test_research_discovers_at_most_one_tech(mini_model):
     assert techs_after - techs_before <= 1, (
         f"At most 1 tech per research action; discovered {techs_after - techs_before}"
     )
+
+
+def test_iron_working_raises_per_civ_military_bonus(mini_model):
+    """iron_working discovery must raise civ.military_tech_bonus."""
+    from civ_sim.agents.city import CityAgent
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    city = cities[0]
+    bonus_before = city.civ.military_tech_bonus
+
+    mini_model.tech_engine._discover("iron_working", city)
+
+    assert city.civ.military_tech_bonus > bonus_before, (
+        f"iron_working should raise military_tech_bonus; was {bonus_before}, now {city.civ.military_tech_bonus}"
+    )
+
+
+def test_sailing_raises_per_civ_trade_range(mini_model):
+    """sailing discovery must raise civ.trade_range_bonus."""
+    from civ_sim.agents.city import CityAgent
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    city = cities[0]
+    bonus_before = city.civ.trade_range_bonus
+
+    mini_model.tech_engine._discover("sailing", city)
+
+    assert city.civ.trade_range_bonus > bonus_before, (
+        f"sailing should raise trade_range_bonus; was {bonus_before}, now {city.civ.trade_range_bonus}"
+    )

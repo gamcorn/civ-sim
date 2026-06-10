@@ -89,6 +89,10 @@ class TechEngine:
         effects = TECH_EFFECTS.get(tech, {})
         if "food_regen" in effects:
             civ.harvest_bonus += effects["food_regen"]   # per-civ (from Task 2)
+        if "military_bonus" in effects:
+            civ.military_tech_bonus += effects["military_bonus"]
+        if "trade_range" in effects:
+            civ.trade_range_bonus += effects["trade_range"]
 
         city.model.logger.log_event(
             tick=city.model.steps,

@@ -42,6 +42,8 @@ def make_mock_city(
     civ.traits = traits
     civ.total_military = military
     civ.discovered_techs = set(techs or [])
+    civ.trade_range_bonus = 0
+    civ.military_tech_bonus = 0.0
 
     # Enemy civ
     enemy_civ = MagicMock()
