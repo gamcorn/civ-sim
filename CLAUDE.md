@@ -10,29 +10,29 @@ Research-grade agent-based civilization simulator. Two civilizations compete acr
 
 ```bash
 # Headless run (rule-based, default)
-.venv/bin/python main.py --seed 42 --ticks 500 --no-visualize
+.venv/bin/python -m civ_sim --seed 42 --ticks 500 --no-visualize
 
 # Live visualization
-.venv/bin/python main.py --seed 42 --ticks 500
+.venv/bin/python -m civ_sim --seed 42 --ticks 500
 
 # LLM provider — all civs on local vLLM
-.venv/bin/python main.py --ticks 200 --no-visualize \
+.venv/bin/python -m civ_sim --ticks 200 --no-visualize \
   --provider openai_compatible \
   --model meta-llama/Llama-3.1-70B-Instruct \
   --base-url http://localhost:8000/v1 \
   --api-key EMPTY
 
 # Per-civ provider via YAML (LLM vs rule-based head-to-head)
-.venv/bin/python main.py --ticks 200 --no-visualize --config examples/llm_vs_rule.yaml
+.venv/bin/python -m civ_sim --ticks 200 --no-visualize --config examples/llm_vs_rule.yaml
 
 # Anthropic API
-.venv/bin/python main.py --ticks 100 --no-visualize \
+.venv/bin/python -m civ_sim --ticks 100 --no-visualize \
   --provider anthropic \
   --model claude-haiku-4-5-20251001 \
   --api-key $ANTHROPIC_API_KEY
 
 # Ray parameter sweep
-.venv/bin/python main.py --sweep --n-runs 100 --output sweep.duckdb
+.venv/bin/python -m civ_sim --sweep --n-runs 100 --output sweep.duckdb
 
 # Tests
 .venv/bin/pytest tests/ -v
@@ -57,36 +57,45 @@ Research-grade agent-based civilization simulator. Two civilizations compete acr
 
 ```
 civ-sim/
-├── config.py                  # SimConfig + ProviderConfig dataclasses
-├── main.py                    # CLI entry point
-├── world/
-│   ├── grid.py                # ResourceGrid (OrthogonalMooreGrid + PropertyLayers)
-│   ├── resources.py           # ResourceType enum
-│   └── events.py              # Environmental event sampler
-├── agents/
-│   ├── civilization.py        # CulturalTraits + Civilization (not a Mesa agent)
-│   ├── city.py                # CityAgent(Grid2DMovingAgent) — primary unit
-│   ├── decisions.py           # Weighted-scoring engine (6 actions)
-│   └── providers/             # Swappable decision backends
-│       ├── base.py            # DecisionProvider ABC
-│       ├── rule_based.py      # RuleBasedProvider (wraps decisions.py)
-│       ├── openai_compat.py   # OpenAICompatibleProvider (vLLM/Ollama/NIM/OpenAI)
-│       ├── anthropic_provider.py  # AnthropicProvider
-│       ├── factory.py         # create_provider(ProviderConfig)
-│       └── prompt.py          # build_prompt(), parse_response(), SYSTEM_PROMPT
-├── technology/
-│   └── discovery.py           # Threshold-based emergent tech tree
-├── simulation/
-│   ├── model.py               # CivModel(mesa.Model)
-│   └── runner.py              # Single run + Ray sweep
-├── storage/
-│   └── logger.py              # DuckDB event log (one row per city per tick)
-├── visualization/
-│   └── renderer.py            # matplotlib FuncAnimation live map
-└── tests/
-    ├── conftest.py             # make_mock_city() fixture
-    ├── test_model_dispatch.py
-    └── providers/              # Provider-specific tests
+├── src/
+│   └── civ_sim/
+│       ├── __main__.py            # CLI entry point (python -m civ_sim)
+│       ├── config.py              # SimConfig + ProviderConfig dataclasses
+│       ├── replay.py              # Replay CLI
+│       ├── agents/
+│       │   ├── city.py            # CityAgent(Grid2DMovingAgent) — primary unit
+│       │   ├── civilization.py    # CulturalTraits + Civilization
+│       │   ├── decisions.py       # Weighted-scoring engine (6 actions)
+│       │   └── providers/         # Swappable decision backends
+│       │       ├── base.py
+│       │       ├── rule_based.py
+│       │       ├── openai_compat.py
+│       │       ├── anthropic_provider.py
+│       │       ├── council_provider.py
+│       │       ├── factory.py
+│       │       └── prompt.py
+│       ├── simulation/
+│       │   ├── model.py           # CivModel(mesa.Model)
+│       │   └── runner.py          # Single run + Ray sweep
+│       ├── storage/
+│       │   ├── logger.py          # DuckDB event log
+│       │   └── snapshot.py        # Replay snapshots
+│       ├── technology/
+│       │   └── discovery.py       # Threshold-based emergent tech tree
+│       ├── visualization/
+│       │   ├── renderer.py        # matplotlib FuncAnimation live map
+│       │   └── terminal_renderer.py
+│       └── world/
+│           ├── grid.py            # ResourceGrid
+│           ├── resources.py       # ResourceType enum
+│           └── events.py          # Environmental event sampler
+├── tests/
+│   ├── providers/                 # Provider-specific tests
+│   ├── snapshot/                  # Snapshot tests
+│   └── test_*.py
+├── scripts/
+├── examples/
+└── docs/
 ```
 
 ## Mesa 3.x API (Breaking Changes from 2.x)
@@ -158,7 +167,7 @@ vllm serve meta-llama/Llama-3.1-70B-Instruct \
   --gpu-memory-utilization 0.85
 
 # Run simulation against it (terminal 2)
-python main.py --seed 42 --ticks 200 --no-visualize \
+.venv/bin/python -m civ_sim --seed 42 --ticks 200 --no-visualize \
   --provider openai_compatible \
   --model meta-llama/Llama-3.1-70B-Instruct
 

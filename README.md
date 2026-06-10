@@ -42,7 +42,7 @@ pip install -e ".[all]"        # everything
 Verify the install:
 
 ```bash
-python main.py --seed 42 --ticks 10 --no-visualize
+.venv/bin/python -m civ_sim --seed 42 --ticks 10 --no-visualize
 ```
 
 Expected output ends with `Simulation ended at tick 10`.
@@ -54,13 +54,13 @@ Expected output ends with `Simulation ended at tick 10`.
 ### Headless run (fastest)
 
 ```bash
-python main.py --seed 42 --ticks 500 --no-visualize
+.venv/bin/python -m civ_sim --seed 42 --ticks 500 --no-visualize
 ```
 
 ### Live map
 
 ```bash
-python main.py --seed 42 --ticks 500
+.venv/bin/python -m civ_sim --seed 42 --ticks 500
 ```
 
 A matplotlib window opens with a seven-panel dashboard updated each tick — see [Visualization Dashboard](#visualization-dashboard) for details.
@@ -68,7 +68,7 @@ A matplotlib window opens with a seven-panel dashboard updated each tick — see
 ### Terminal map (SSH / headless)
 
 ```bash
-python main.py --seed 42 --ticks 500 --terminal-viz
+.venv/bin/python -m civ_sim --seed 42 --ticks 500 --terminal-viz
 ```
 
 Renders the world directly in the terminal using ANSI color codes — no display server needed. Shows a color-coded territory map, per-civilization stats (population, military, food, territory, top actions), and a population bar per civilization. Falls back to this renderer automatically if matplotlib cannot open a display window.
@@ -131,7 +131,7 @@ vllm serve meta-llama/Llama-3.1-70B-Instruct \
 **Terminal 2 — run the simulation:**
 
 ```bash
-python main.py --seed 42 --ticks 200 --no-visualize \
+.venv/bin/python -m civ_sim --seed 42 --ticks 200 --no-visualize \
   --provider openai_compatible \
   --model meta-llama/Llama-3.1-70B-Instruct \
   --base-url http://localhost:8000/v1 \
@@ -143,7 +143,7 @@ Works with any OpenAI-compatible server: vLLM, Ollama, LM Studio, NVIDIA NIM, or
 ### Anthropic API
 
 ```bash
-python main.py --seed 42 --ticks 200 --no-visualize \
+.venv/bin/python -m civ_sim --seed 42 --ticks 200 --no-visualize \
   --provider anthropic \
   --model claude-haiku-4-5-20251001 \
   --api-key $ANTHROPIC_API_KEY
@@ -166,7 +166,7 @@ bash scripts/setup_llm.sh --hf-token YOUR_HF_TOKEN
 bash scripts/start_vllm_council.sh
 
 # 4. Run the simulation (terminal 2)
-python main.py --ticks 200 --no-visualize --config examples/council_dgx.yaml
+.venv/bin/python -m civ_sim --ticks 200 --no-visualize --config examples/council_dgx.yaml
 ```
 
 If Nemotron access is unavailable, add `--fallback-model` to download `meta-llama/Llama-3.3-70B-Instruct` instead.
@@ -178,7 +178,7 @@ If Nemotron access is unavailable, add `--fallback-model` to download `meta-llam
 bash scripts/start_vllm_nano.sh
 
 # Run the simulation (terminal 2)
-python main.py --ticks 200 --no-visualize --config examples/council_nano.yaml
+.venv/bin/python -m civ_sim --ticks 200 --no-visualize --config examples/council_nano.yaml
 ```
 
 `council_nano.yaml` sets `guided_json: true` and `chief_timeout: 30.0` — both needed for chain-of-thought / thinking models that output reasoning before JSON.
@@ -205,12 +205,12 @@ Intelligence Report:
 
 ```bash
 # Moderate fog — enemy stats are roughly right but not exact
-python main.py --provider council --ticks 200 --no-visualize \
+.venv/bin/python -m civ_sim --provider council --ticks 200 --no-visualize \
   --model meta-llama/Llama-3.1-70B-Instruct \
   --fog-of-war 0.3
 
 # High fog — ministers work from unreliable intel
-python main.py --provider council --ticks 200 --no-visualize \
+.venv/bin/python -m civ_sim --provider council --ticks 200 --no-visualize \
   --model meta-llama/Llama-3.1-70B-Instruct \
   --fog-of-war 0.8
 ```
@@ -277,7 +277,7 @@ civ_providers:
 Run:
 
 ```bash
-python main.py --seed 42 --ticks 200 --no-visualize --config config.yaml
+.venv/bin/python -m civ_sim --seed 42 --ticks 200 --no-visualize --config config.yaml
 ```
 
 Query who won and what actions each side favored:
@@ -304,7 +304,7 @@ Long simulations can be replayed after the fact by writing periodic world snapsh
 Add `--snapshot-interval N` to write a full world snapshot every N ticks:
 
 ```bash
-python main.py --seed 42 --ticks 5000 --no-visualize \
+.venv/bin/python -m civ_sim --seed 42 --ticks 5000 --no-visualize \
   --snapshot-interval 50 --db run.duckdb
 ```
 
@@ -313,7 +313,7 @@ This stores grid state (territory ownership + food levels), city positions, popu
 ### Step 2 — Replay
 
 ```bash
-python replay.py run.duckdb
+.venv/bin/python -m civ_sim.replay run.duckdb
 ```
 
 The renderer is chosen automatically: matplotlib if `$DISPLAY` is set, terminal otherwise.
@@ -321,10 +321,10 @@ The renderer is chosen automatically: matplotlib if `$DISPLAY` is set, terminal 
 **Options:**
 
 ```bash
-python replay.py run.duckdb --renderer terminal     # force terminal
-python replay.py run.duckdb --renderer matplotlib   # force matplotlib
-python replay.py run.duckdb --from-tick 2000        # start near tick 2000
-python replay.py run.duckdb --speed 4               # start at 4× speed
+.venv/bin/python -m civ_sim.replay run.duckdb --renderer terminal     # force terminal
+.venv/bin/python -m civ_sim.replay run.duckdb --renderer matplotlib   # force matplotlib
+.venv/bin/python -m civ_sim.replay run.duckdb --from-tick 2000        # start near tick 2000
+.venv/bin/python -m civ_sim.replay run.duckdb --speed 4               # start at 4× speed
 ```
 
 ### Keyboard controls
@@ -393,7 +393,7 @@ Victories capture territory around the defeated city; defeats cost the attacker 
 
 ## Visualization Dashboard
 
-The live matplotlib window (`python main.py --seed 42 --ticks 500`) renders seven panels simultaneously.
+The live matplotlib window (`.venv/bin/python -m civ_sim --seed 42 --ticks 500`) renders seven panels simultaneously.
 
 ### World map *(left, full height)*
 
@@ -445,13 +445,13 @@ Reference lines at β = 1.0 and β = 2.0 divide the chart into mild / severe / c
 Run many seeds in parallel with Ray and collect results into a single DuckDB file:
 
 ```bash
-python main.py --sweep --n-runs 1000 --output sweep.duckdb --no-visualize
+.venv/bin/python -m civ_sim --sweep --n-runs 1000 --output sweep.duckdb --no-visualize
 ```
 
 Control parallelism explicitly (useful on shared machines):
 
 ```bash
-python main.py --sweep --n-runs 1000 --workers 8 --output sweep.duckdb --no-visualize
+.venv/bin/python -m civ_sim --sweep --n-runs 1000 --workers 8 --output sweep.duckdb --no-visualize
 ```
 
 Analyze results:
@@ -477,7 +477,7 @@ Two extra flags squeeze more throughput out of a DGX Spark node.
 **Batch LLM inference** — sends all city prompts in a single `/v1/completions` request instead of N concurrent chat calls. vLLM schedules them as a true GPU batch, eliminating N-1 HTTP round-trips per tick:
 
 ```bash
-python main.py --ticks 200 --no-visualize \
+.venv/bin/python -m civ_sim --ticks 200 --no-visualize \
   --provider openai_compatible \
   --model meta-llama/Llama-3.1-70B-Instruct \
   --base-url http://localhost:8000/v1 \
@@ -493,13 +493,13 @@ pip install cupy-cuda12x   # match your CUDA version
 Then pass `--grid-backend cupy` to any run or sweep:
 
 ```bash
-python main.py --seed 42 --ticks 500 --no-visualize --grid-backend cupy
+.venv/bin/python -m civ_sim --seed 42 --ticks 500 --no-visualize --grid-backend cupy
 ```
 
 Both flags can be combined. For a full DGX sweep:
 
 ```bash
-python main.py --sweep --n-runs 10000 --output dgx_sweep.duckdb \
+.venv/bin/python -m civ_sim --sweep --n-runs 10000 --output dgx_sweep.duckdb \
   --no-visualize --grid-backend cupy \
   --provider openai_compatible \
   --model meta-llama/Llama-3.1-70B-Instruct \
@@ -522,30 +522,42 @@ All 229 tests should pass. The suite covers the grid, events, logger, civilizati
 
 ```
 civ-sim/
-├── config.py             # All simulation parameters (SimConfig + ProviderConfig)
-├── main.py               # CLI entry point
-├── world/                # Resource grid + environmental events
-├── agents/
-│   ├── city.py           # CityAgent — the primary simulation unit
-│   ├── civilization.py   # Civilization state + cultural traits
-│   ├── decisions.py      # Rule-based weighted scoring engine
-│   └── providers/        # Swappable LLM / rule-based backends
-│       ├── council_provider.py   # CouncilProvider + StrategicDirective
-│       ├── council_ministers.py  # Async sector / budget / chief minister calls
-│       └── council_prompts.py    # Persona builders, state snapshot, JSON schemas
-├── technology/           # Emergent tech tree
-├── simulation/           # Mesa model + Ray sweep runner
-├── storage/              # DuckDB event logger + snapshot writer/reader
-├── visualization/        # Live matplotlib + ANSI terminal renderers
+├── src/
+│   └── civ_sim/
+│       ├── __main__.py            # CLI entry point (python -m civ_sim)
+│       ├── config.py              # SimConfig + ProviderConfig dataclasses
+│       ├── replay.py              # Replay CLI
+│       ├── agents/
+│       │   ├── city.py            # CityAgent(Grid2DMovingAgent) — primary unit
+│       │   ├── civilization.py    # CulturalTraits + Civilization
+│       │   ├── decisions.py       # Weighted-scoring engine (6 actions)
+│       │   └── providers/         # Swappable LLM / rule-based backends
+│       │       ├── council_provider.py   # CouncilProvider + StrategicDirective
+│       │       ├── council_ministers.py  # Async sector / budget / chief minister calls
+│       │       └── council_prompts.py    # Persona builders, state snapshot, JSON schemas
+│       ├── simulation/
+│       │   ├── model.py           # CivModel(mesa.Model)
+│       │   └── runner.py          # Single run + Ray sweep
+│       ├── storage/
+│       │   ├── logger.py          # DuckDB event log
+│       │   └── snapshot.py        # Replay snapshots
+│       ├── technology/
+│       │   └── discovery.py       # Threshold-based emergent tech tree
+│       ├── visualization/
+│       │   ├── renderer.py        # matplotlib FuncAnimation live map
+│       │   └── terminal_renderer.py
+│       └── world/
+│           ├── grid.py            # ResourceGrid
+│           ├── resources.py       # ResourceType enum
+│           └── events.py          # Environmental event sampler
+├── tests/                # pytest suite (229 tests)
 ├── scripts/
 │   ├── setup_llm.sh           # One-time vLLM + model download setup
 │   ├── start_vllm_council.sh  # Launch vLLM server for Nemotron-70B (auto-detects GPU count)
 │   └── start_vllm_nano.sh     # Launch vLLM server for Nemotron-Nano-30B
-├── examples/
-│   ├── council_dgx.yaml   # Council config for DGX Spark (Nemotron-70B)
-│   └── council_nano.yaml  # Council config for Nemotron-Nano-30B (guided_json + chief_timeout)
-├── replay.py             # Interactive replay player for completed runs
-└── tests/                # pytest suite (229 tests)
+└── examples/
+    ├── council_dgx.yaml   # Council config for DGX Spark (Nemotron-70B)
+    └── council_nano.yaml  # Council config for Nemotron-Nano-30B (guided_json + chief_timeout)
 ```
 
 See `CLAUDE.md` for architecture details, Mesa 3.x gotchas, and design decisions.
