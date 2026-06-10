@@ -125,6 +125,13 @@ class CouncilProvider(DecisionProvider):
             if chief_output is None:
                 if hasattr(model, "logger"):
                     model.logger.log_directive(tick, civ.civ_id, None, success=False)
+                    model.logger.log_council_session(
+                        tick, civ.civ_id,
+                        emergency=is_emergency, council_off=True,
+                        state_snapshot=state_snapshot,
+                        sector_outputs=[], budget_output=None,
+                        chief_output=None, success=False,
+                    )
                 return
             directive = StrategicDirective(
                 era_goal="",
@@ -137,6 +144,13 @@ class CouncilProvider(DecisionProvider):
             self._directive = directive
             if hasattr(model, "logger"):
                 model.logger.log_directive(tick, civ.civ_id, directive)
+                model.logger.log_council_session(
+                    tick, civ.civ_id,
+                    emergency=is_emergency, council_off=True,
+                    state_snapshot=state_snapshot,
+                    sector_outputs=[], budget_output=None,
+                    chief_output=chief_output, success=True,
+                )
             self._update_civ_snapshot(civ, cities, tick, is_emergency)
             return
 
@@ -177,6 +191,14 @@ class CouncilProvider(DecisionProvider):
         if chief_output is None:
             if hasattr(model, "logger"):
                 model.logger.log_directive(tick, civ.civ_id, None, success=False)
+                model.logger.log_council_session(
+                    tick, civ.civ_id,
+                    emergency=is_emergency, council_off=False,
+                    state_snapshot=state_snapshot,
+                    sector_outputs=sector_outputs,
+                    budget_output=budget_output,
+                    chief_output=None, success=False,
+                )
             return
 
         directive = StrategicDirective(
@@ -195,6 +217,14 @@ class CouncilProvider(DecisionProvider):
 
         if hasattr(model, "logger"):
             model.logger.log_directive(tick, civ.civ_id, directive)
+            model.logger.log_council_session(
+                tick, civ.civ_id,
+                emergency=is_emergency, council_off=False,
+                state_snapshot=state_snapshot,
+                sector_outputs=sector_outputs,
+                budget_output=budget_output,
+                chief_output=chief_output, success=True,
+            )
 
     def _synthesize_from_sectors(self, sector_outputs: list[dict]) -> dict | None:
         """Build a minimal chief output from sector weight_requests when chief fails."""

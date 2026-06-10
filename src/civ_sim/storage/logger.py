@@ -30,6 +30,21 @@ CREATE TABLE IF NOT EXISTS directives (
 );
 """
 
+CREATE_COUNCIL_SQL = """
+CREATE TABLE IF NOT EXISTS council_sessions (
+    tick                INTEGER,
+    seed                INTEGER,
+    civ_id              INTEGER,
+    emergency           BOOLEAN,
+    council_off         BOOLEAN,
+    state_snapshot      VARCHAR,
+    sector_outputs_json VARCHAR,
+    budget_output_json  VARCHAR,
+    chief_output_json   VARCHAR,
+    success             BOOLEAN
+);
+"""
+
 
 class EventLogger:
     def __init__(self, db_path: str, seed: int, flush_interval: int = 10):
@@ -39,6 +54,7 @@ class EventLogger:
         self._con = duckdb.connect(db_path)
         self._con.execute(CREATE_SQL)
         self._con.execute(CREATE_DIRECTIVES_SQL)
+        self._con.execute(CREATE_COUNCIL_SQL)
 
     def log_event(
         self,
@@ -71,6 +87,32 @@ class EventLogger:
     def close(self) -> None:
         self.flush()
         self._con.close()
+
+    def log_council_session(
+        self,
+        tick: int,
+        civ_id: int,
+        *,
+        emergency: bool,
+        council_off: bool,
+        state_snapshot: str,
+        sector_outputs: list[dict],
+        budget_output: dict | None,
+        chief_output: dict | None,
+        success: bool,
+    ) -> None:
+        import json
+        self._con.execute(
+            "INSERT INTO council_sessions VALUES (?,?,?,?,?,?,?,?,?,?)",
+            [
+                tick, self.seed, civ_id, emergency, council_off,
+                state_snapshot,
+                json.dumps(sector_outputs),
+                json.dumps(budget_output) if budget_output is not None else None,
+                json.dumps(chief_output) if chief_output is not None else None,
+                success,
+            ],
+        )
 
     def log_directive(self, tick: int, civ_id: int, directive, success: bool = True) -> None:
         import json
