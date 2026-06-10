@@ -83,6 +83,18 @@ def test_history_tracks_pop_for_both_civs(mini_model):
     assert len(mini_model.history["pop_1"]) >= 1
 
 
+def test_history_tracks_wood_and_mineral_stockpiles(mini_model):
+    """After step(), wood_civ_i and mineral_civ_i series are populated with non-negative values."""
+    mini_model.step()
+    history = mini_model.history
+    assert "wood_civ_0" in history
+    assert "mineral_civ_0" in history
+    assert len(history["wood_civ_0"]) >= 1
+    assert len(history["mineral_civ_0"]) >= 1
+    assert all(v >= 0.0 for v in history["wood_civ_0"])
+    assert all(v >= 0.0 for v in history["mineral_civ_0"])
+
+
 # ---------------------------------------------------------------------------
 # Aggregate tests
 # ---------------------------------------------------------------------------

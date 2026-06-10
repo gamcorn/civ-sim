@@ -175,3 +175,77 @@ def test_collapse_releases_territory(mini_model):
 
     # Home tile is released; surrounding tiles claimed before collapse remain
     assert mini_model.grid.ownership[city.x, city.y] == -1
+
+
+# ---------------------------------------------------------------------------
+# Wood / mineral stockpile upkeep
+# ---------------------------------------------------------------------------
+
+def test_consume_resources_reduces_wood_stock(mini_model):
+    """wood_stock decreases from population/military upkeep when no tile wood."""
+    city = _get_city(mini_model)
+    city.population = 200
+    city.military = 50
+    city.wood_stock = 100.0
+    mini_model.grid.layers[ResourceType.WOOD].data[city.x, city.y] = 0.0
+    city._consume_resources()
+    assert city.wood_stock < 100.0
+
+
+def test_consume_resources_reduces_mineral_stock(mini_model):
+    """mineral_stock decreases from population/military upkeep when no tile minerals."""
+    city = _get_city(mini_model)
+    city.population = 200
+    city.military = 50
+    city.mineral_stock = 100.0
+    mini_model.grid.layers[ResourceType.MINERALS].data[city.x, city.y] = 0.0
+    city._consume_resources()
+    assert city.mineral_stock < 100.0
+
+
+def test_consume_resources_wood_stock_never_negative(mini_model):
+    """wood_stock must never go below zero regardless of upkeep demand."""
+    city = _get_city(mini_model)
+    city.population = 10000
+    city.military = 5000
+    city.wood_stock = 0.0
+    mini_model.grid.layers[ResourceType.WOOD].data[city.x, city.y] = 0.0
+    city._consume_resources()
+    assert city.wood_stock >= 0.0
+
+
+def test_consume_resources_mineral_stock_never_negative(mini_model):
+    """mineral_stock must never go below zero regardless of upkeep demand."""
+    city = _get_city(mini_model)
+    city.population = 10000
+    city.military = 5000
+    city.mineral_stock = 0.0
+    mini_model.grid.layers[ResourceType.MINERALS].data[city.x, city.y] = 0.0
+    city._consume_resources()
+    assert city.mineral_stock >= 0.0
+
+
+def test_consume_resources_wood_shortage_reduces_population(mini_model):
+    """When wood_stock hits zero, population takes a shortage loss."""
+    city = _get_city(mini_model)
+    city.population = 500
+    city.military = 0
+    city.wood_stock = 0.0
+    city.mineral_stock = 1000.0  # keep minerals high to isolate wood shortage
+    mini_model.grid.layers[ResourceType.WOOD].data[city.x, city.y] = 0.0
+    pop_before = city.population
+    city._consume_resources()
+    assert city.population < pop_before
+
+
+def test_consume_resources_mineral_shortage_extra_attrition(mini_model):
+    """When mineral_stock hits zero, military takes extra attrition."""
+    city = _get_city(mini_model)
+    city.population = 200
+    city.military = 200
+    city.mineral_stock = 0.0
+    city.wood_stock = 1000.0  # keep wood high to isolate mineral shortage
+    mini_model.grid.layers[ResourceType.MINERALS].data[city.x, city.y] = 0.0
+    mil_before = city.military
+    city._consume_resources()
+    assert city.military < mil_before

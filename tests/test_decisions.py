@@ -243,3 +243,46 @@ def test_attack_modifier_negative_when_clearly_outgunned():
     # 10 > 20*0.8=16 → False
     modifier = _resource_modifier(ATTACK, city)
     assert modifier == -0.5, f"Expected -0.5, got {modifier}"
+
+
+# ---------------------------------------------------------------------------
+# Feasibility — stockpile gates
+# ---------------------------------------------------------------------------
+
+
+def test_feasible_excludes_attack_when_no_minerals():
+    """ATTACK is infeasible when mineral_stock < attack_mineral_cost."""
+    city = make_mock_city(military=20, mineral_stock=0.0)
+    enemy = MagicMock()
+    enemy.civ.civ_id = 1
+    enemy.x = 14
+    enemy.y = 10
+    city.model.agents_by_type = {type(city): [enemy]}
+    feasible = get_feasible_actions(city)
+    assert ATTACK not in feasible
+
+
+def test_feasible_excludes_expand_when_insufficient_wood():
+    """EXPAND is infeasible when wood_stock < 50% of expand_wood_cost (threshold=2.5)."""
+    city = make_mock_city(wood_stock=1.0)  # below 2.5 threshold
+    feasible = get_feasible_actions(city)
+    assert EXPAND not in feasible
+
+
+# ---------------------------------------------------------------------------
+# _resource_modifier — wood/mineral urgency on GATHER
+# ---------------------------------------------------------------------------
+
+
+def test_resource_modifier_gather_higher_when_wood_low():
+    """GATHER modifier is higher when wood_stock is depleted versus full."""
+    city_low = make_mock_city(wood_stock=0.0)
+    city_full = make_mock_city(wood_stock=50.0)
+    assert _resource_modifier(GATHER, city_low) > _resource_modifier(GATHER, city_full)
+
+
+def test_resource_modifier_gather_higher_when_mineral_low():
+    """GATHER modifier is higher when mineral_stock is depleted versus full."""
+    city_low = make_mock_city(mineral_stock=0.0)
+    city_full = make_mock_city(mineral_stock=40.0)
+    assert _resource_modifier(GATHER, city_low) > _resource_modifier(GATHER, city_full)
