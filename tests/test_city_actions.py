@@ -376,3 +376,41 @@ def test_gather_zero_pop_yields_nothing(mini_model):
     city.food_stock = 0.0
     city._do_gather()
     assert city.food_stock == 0.0, "Zero-pop city must not harvest any food"
+
+
+# ---------------------------------------------------------------------------
+# _do_recruit
+# ---------------------------------------------------------------------------
+
+def test_do_recruit_increases_military_and_reduces_population(mini_model):
+    """Recruiting must increase military and reduce population by the drafted amount."""
+    cities = _get_cities(mini_model)
+    city = cities[0]
+    city.population = 200
+    city.mineral_stock = 50.0
+
+    pop_before = city.population
+    mil_before = city.military
+    city._do_recruit()
+
+    assert city.military > mil_before, (
+        f"military should increase after recruit; was {mil_before}, now {city.military}"
+    )
+    assert city.population < pop_before, (
+        f"population should decrease after recruit; was {pop_before}, now {city.population}"
+    )
+
+
+def test_do_recruit_does_nothing_when_population_too_low(mini_model):
+    """Recruit must not execute when population is at the initial_pop floor."""
+    cities = _get_cities(mini_model)
+    city = cities[0]
+    city.population = mini_model.config.initial_pop  # at the floor
+    city.mineral_stock = 50.0
+
+    pop_before = city.population
+    mil_before = city.military
+    city._do_recruit()
+
+    assert city.military == mil_before, "Military must not change when population is at floor"
+    assert city.population == pop_before, "Population must not change when at floor"

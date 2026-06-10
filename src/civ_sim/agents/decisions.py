@@ -12,8 +12,9 @@ EXPAND = "expand"
 FORTIFY = "fortify"
 ATTACK = "attack"
 RESEARCH = "research"
+RECRUIT = "recruit"
 
-ALL_ACTIONS = [GATHER, TRADE, EXPAND, FORTIFY, ATTACK, RESEARCH]
+ALL_ACTIONS = [GATHER, TRADE, EXPAND, FORTIFY, ATTACK, RESEARCH, RECRUIT]
 
 # Base weights per action for each cultural trait
 # Format: action → {trait → weight}
@@ -24,6 +25,7 @@ _WEIGHTS: dict[str, dict[str, float]] = {
     FORTIFY:  {"aggressiveness": 0.3,  "trust": -0.2, "innovation": 0.0,  "tribalism": 0.2,  "risk_tolerance": -0.3},
     ATTACK:   {"aggressiveness": 0.6,  "trust": -0.5, "innovation": 0.0,  "tribalism": 0.3,  "risk_tolerance": 0.4},
     RESEARCH: {"aggressiveness": -0.2, "trust": 0.1,  "innovation": 0.7,  "tribalism": 0.0,  "risk_tolerance": 0.1},
+    RECRUIT:  {"aggressiveness": 0.4,  "trust": -0.1, "innovation": -0.1, "tribalism": 0.3,  "risk_tolerance": 0.2},
 }
 
 
@@ -92,6 +94,12 @@ def _resource_modifier(action: str, agent: "CityAgent") -> float:
         if len(agent.civ.discovered_techs) >= len(TECH_TREE):
             return -1.0  # nothing left to discover
         return (wood / max_r + min_ratio) * 0.3 - 0.1
+    if action == RECRUIT:
+        civ_mil = max(1, agent.civ.total_military)
+        enemy_mil = _enemy_military(agent)
+        if enemy_mil > civ_mil:
+            return min(0.6, 0.6 * (1.0 - civ_mil / (enemy_mil + 1e-6)))
+        return 0.0
 
     return 0.0
 
@@ -134,6 +142,11 @@ def _feasible(agent: "CityAgent", scores: dict[str, float]) -> dict[str, float]:
         and agent.mineral_stock >= cfg.research_mineral_cost
     ):
         feasible[RESEARCH] = scores[RESEARCH]
+
+    # Recruit: needs population above floor AND minerals for equipment
+    min_pop = cfg.initial_pop + cfg.recruit_pop_cost
+    if agent.population > min_pop and agent.mineral_stock >= cfg.recruit_mineral_cost:
+        feasible[RECRUIT] = scores[RECRUIT]
 
     return feasible
 

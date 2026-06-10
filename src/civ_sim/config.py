@@ -81,6 +81,9 @@ class SimConfig:
     fortify_defense_bonus: float = 0.8
     max_fortification: float = 100.0      # cap for city.fortification
     fortification_decay: float = 0.005    # per-tick fractional decay of fortification
+    recruit_pop_cost: int = 10         # population drafted per recruit action
+    recruit_mineral_cost: float = 3.0  # minerals for equipment per recruit action
+    recruit_military_ratio: float = 1.0  # military units gained per person drafted
     battle_pillage_rate: float = 0.25
     capture_reconstruct_wood: float = 15.0
     capture_reconstruct_mineral: float = 10.0

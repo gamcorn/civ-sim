@@ -84,6 +84,9 @@ def make_mock_city(
     model.config.research_wood_cost = 8.0
     model.config.research_mineral_cost = 5.0
     model.config.attack_mineral_cost = 3.0
+    model.config.initial_pop = 50
+    model.config.recruit_pop_cost = 10
+    model.config.recruit_mineral_cost = 3.0
     model.grid = grid
     model.civilizations = [civ, enemy_civ]
     # agents_by_type returns empty by default (no trade partners, no attack targets)

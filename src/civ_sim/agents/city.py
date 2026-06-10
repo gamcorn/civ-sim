@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from mesa.discrete_space import Grid2DMovingAgent
 
 from civ_sim.agents.decisions import (
-    choose_action, GATHER, TRADE, EXPAND, FORTIFY, ATTACK, RESEARCH,
+    choose_action, GATHER, TRADE, EXPAND, FORTIFY, ATTACK, RESEARCH, RECRUIT,
     _attack_target, _has_unclaimed_neighbor,
 )
 from civ_sim.world.resources import ResourceType
@@ -141,6 +141,8 @@ class CityAgent(Grid2DMovingAgent):
             self._do_attack()
         elif action == RESEARCH:
             self._do_research()
+        elif action == RECRUIT:
+            self._do_recruit()
 
     # ------------------------------------------------------------------
 
@@ -368,6 +370,17 @@ class CityAgent(Grid2DMovingAgent):
         self.civ.science_points += points
 
         self.model.tech_engine.check(self)
+
+    def _do_recruit(self) -> None:
+        cfg = self.model.config
+        pop_available = self.population - cfg.initial_pop  # keep initial_pop as civilians
+        pop_drafted = min(pop_available, cfg.recruit_pop_cost)
+        if pop_drafted <= 0:
+            return
+        mineral_spent = min(self.mineral_stock, cfg.recruit_mineral_cost)
+        self.population -= pop_drafted
+        self.mineral_stock = max(0.0, self.mineral_stock - mineral_spent)
+        self.military += int(pop_drafted * cfg.recruit_military_ratio)
 
     def _collapse(self) -> None:
         self.model.grid.ownership[self.x, self.y] = -1  # release home tile only

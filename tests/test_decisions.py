@@ -316,3 +316,29 @@ def test_research_infeasible_without_stockpile(mini_model):
 
     feasible = get_feasible_actions(city)
     assert RESEARCH not in feasible, "RESEARCH should be infeasible with empty stockpile"
+
+
+def test_recruit_infeasible_when_pop_too_low(mini_model):
+    """RECRUIT must not appear when city population is at or below the draft floor."""
+    from civ_sim.agents.decisions import get_feasible_actions, RECRUIT
+    from civ_sim.agents.city import CityAgent
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    city = cities[0]
+    city.population = mini_model.config.initial_pop  # at floor
+    city.mineral_stock = 50.0
+
+    feasible = get_feasible_actions(city)
+    assert RECRUIT not in feasible, "RECRUIT must be infeasible when pop <= initial_pop"
+
+
+def test_recruit_feasible_when_pop_high_and_minerals_available(mini_model):
+    """RECRUIT must be feasible when pop is above floor and minerals cover cost."""
+    from civ_sim.agents.decisions import get_feasible_actions, RECRUIT
+    from civ_sim.agents.city import CityAgent
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    city = cities[0]
+    city.population = mini_model.config.initial_pop + mini_model.config.recruit_pop_cost + 10
+    city.mineral_stock = mini_model.config.recruit_mineral_cost + 5.0
+
+    feasible = get_feasible_actions(city)
+    assert RECRUIT in feasible, "RECRUIT must be feasible when pop > floor and minerals sufficient"
