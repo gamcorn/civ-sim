@@ -36,11 +36,11 @@ def test_replay_matplotlib_calls_plt_show():
             "matplotlib": MagicMock(),
             "matplotlib.pyplot": mock_plt,
             "matplotlib.animation": MagicMock(FuncAnimation=mock_anim),
-            "visualization.renderer": MagicMock(Renderer=mock_renderer),
+            "civ_sim.visualization.renderer": MagicMock(Renderer=mock_renderer),
         }):
             # Reload replay module to get mocked imports
             import importlib
-            import replay
+            import civ_sim.replay as replay
             importlib.reload(replay)
 
             replay.plt.show = MagicMock()

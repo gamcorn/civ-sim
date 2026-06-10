@@ -53,7 +53,7 @@ def test_run_sweep_writes_to_output_db(base_cfg):
                 return [refs[0]], refs[1:]
             return [], []
 
-        with patch("simulation.runner.ray") as mock_ray:
+        with patch("civ_sim.simulation.runner.ray") as mock_ray:
             mock_ray.init = MagicMock()
             mock_ray.remote = MagicMock(return_value=MagicMock(
                 remote=MagicMock(side_effect=lambda **kw: f"ref_{kw['seed']}")
