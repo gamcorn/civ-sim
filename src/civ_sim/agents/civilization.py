@@ -47,6 +47,7 @@ class Civilization:
         # Aggregate stats updated each tick by the model
         self.total_pop: int = 0
         self.total_military: int = 0
+        self.city_count: int = 0
         self.tech_level: int = 0
         self.discovered_techs: set[str] = set()
         self.alive: bool = True
@@ -59,6 +60,7 @@ class Civilization:
     def update_aggregates(self, cities: list) -> None:
         self.total_pop = sum(c.population for c in cities)
         self.total_military = sum(c.military for c in cities)
+        self.city_count = len(cities)
         self.alive = self.total_pop > 0
 
     def __repr__(self) -> str:

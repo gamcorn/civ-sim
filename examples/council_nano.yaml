@@ -1,0 +1,39 @@
+# examples/council_nano.yaml
+# Council provider using Nemotron-3-Nano-30B FP8 (MoE, 3.5B active params).
+# Much faster per-tick than 70B — good for high-volume sweep runs.
+#
+# Nano is a thinking/reasoning model; guided_json forces direct JSON output and
+# eliminates the token overhead of chain-of-thought reasoning.
+#
+# Start server first:
+#   bash scripts/start_vllm_nano.sh
+# Then run:
+#   .venv/bin/python main.py --ticks 200 --no-visualize --config examples/council_nano.yaml
+#
+# To test single-call mode without minister debate:
+#   .venv/bin/python main.py --ticks 200 --no-visualize --config examples/council_nano.yaml --council-off
+
+civ_providers:
+  - type: council
+    model: model
+    base_url: http://localhost:8000/v1
+    api_key: EMPTY
+    timeout: 10.0
+    chief_timeout: 30.0
+    directive_period: 10
+    max_rounds: 2
+    emergency_triggers: true
+    emergency_cooldown_ticks: 3
+    guided_json: true          # constrained decoding — eliminates parse failures for nano
+
+  - type: council
+    model: model
+    base_url: http://localhost:8000/v1
+    api_key: EMPTY
+    timeout: 10.0
+    chief_timeout: 30.0
+    directive_period: 10
+    max_rounds: 2
+    emergency_triggers: true
+    emergency_cooldown_ticks: 3
+    guided_json: true

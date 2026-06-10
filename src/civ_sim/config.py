@@ -21,6 +21,9 @@ class ProviderConfig:
     chief_model: str = ""              # model for chief of staff (falls back to model)
     emergency_triggers: bool = True    # allow out-of-schedule emergency councils
     emergency_cooldown_ticks: int = 3  # min ticks between emergency sessions
+    council_off: bool = False          # skip minister debate; single chief call only
+    chief_timeout: float = 0.0         # chief-of-staff timeout; 0 = timeout * 3
+    guided_json: bool = False          # use vLLM guided JSON (constrained decoding)
 
 
 @dataclass
@@ -79,6 +82,8 @@ class SimConfig:
     civ_providers: list = field(
         default_factory=lambda: [ProviderConfig(), ProviderConfig()]
     )
+    # Intel quality for council providers (0 = perfect, 1 = very noisy)
+    fog_of_war: float = 0.0
     # DGX Spark sweep / grid
     num_sweep_workers: int = 0   # Ray workers; 0 = auto (one per CPU core)
     grid_backend: str = "numpy"  # "numpy" | "cupy"

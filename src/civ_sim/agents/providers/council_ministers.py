@@ -8,9 +8,13 @@ import openai
 
 from agents.decisions import ALL_ACTIONS
 from agents.providers.council_prompts import (
-    SECTOR_SCHEMA, BUDGET_SCHEMA, CHIEF_SCHEMA,
-    build_sector_persona, build_budget_persona, build_chief_persona,
-    build_sector_user_message, build_budget_user_message, build_chief_user_message,
+    SECTOR_SCHEMA, SECTOR_SCHEMA_DICT, build_sector_schema_dict, build_sector_schema_str,
+    BUDGET_SCHEMA, BUDGET_SCHEMA_DICT,
+    CHIEF_SCHEMA, CHIEF_SCHEMA_DICT,
+    CHIEF_LITE_SCHEMA, CHIEF_LITE_SCHEMA_DICT,
+    build_sector_persona, build_budget_persona, build_chief_persona, build_chief_lite_persona,
+    build_sector_user_message, build_budget_user_message,
+    build_chief_user_message, build_chief_lite_user_message,
 )
 
 if TYPE_CHECKING:
@@ -19,14 +23,40 @@ if TYPE_CHECKING:
 
 def _parse_json_safe(raw: str) -> dict[str, Any] | None:
     text = raw.strip()
+
+    # Thinking models (e.g. Nemotron-Nano) output <think>...</think> CoT before JSON.
+    # Strip everything up to and including the closing </think> tag.
+    think_end = text.rfind("</think>")
+    if think_end != -1:
+        text = text[think_end + len("</think>"):].strip()
+
+    # Strip markdown code block wrapper
     if text.startswith("```"):
         lines = text.splitlines()
-        end = -1 if lines[-1].strip() == "```" else len(lines)
-        text = "\n".join(lines[1:end])
+        end = next((i for i in range(len(lines) - 1, 0, -1) if lines[i].strip() == "```"), len(lines))
+        text = "\n".join(lines[1:end]).strip()
+
+    # Direct parse (fast path)
     try:
         return json.loads(text)
     except json.JSONDecodeError:
+        pass
+
+    # Extract the outermost {...} blob — model may have prefixed with residual text
+    last_brace = text.rfind("}")
+    if last_brace == -1:
         return None
+    text = text[:last_brace + 1]
+    pos = text.rfind("{")
+    while pos != -1:
+        try:
+            result = json.loads(text[pos:])
+            if isinstance(result, dict):
+                return result
+        except json.JSONDecodeError:
+            pass
+        pos = text.rfind("{", 0, pos)
+    return None
 
 
 async def _call_llm(
@@ -38,7 +68,11 @@ async def _call_llm(
     user: str,
     temperature: float,
     max_tokens: int,
+    guided_json: dict | None = None,
 ) -> dict[str, Any] | None:
+    extra: dict = {}
+    if guided_json is not None:
+        extra["extra_body"] = {"guided_json": guided_json}
     try:
         resp = await asyncio.wait_for(
             client.chat.completions.create(
@@ -49,6 +83,7 @@ async def _call_llm(
                 ],
                 temperature=temperature,
                 max_tokens=max_tokens,
+                **extra,
             ),
             timeout=timeout,
         )
@@ -66,15 +101,19 @@ async def call_sector_minister(
     model: str,
     timeout: float,
     previous_opinions: list[str] | None = None,
+    guided_json: bool = False,
 ) -> dict:
     persona = build_sector_persona(spec, traits)
     user_msg = build_sector_user_message(spec, state_snapshot, previous_opinions)
+    schema_str = build_sector_schema_str(spec)
+    schema_dict = build_sector_schema_dict(spec) if guided_json else None
     parsed = await _call_llm(
         client, model, timeout,
-        system=f"{persona}\n\nSchema:\n{SECTOR_SCHEMA}",
+        system=f"{persona}\n\nSchema:\n{schema_str}",
         user=user_msg,
         temperature=0.3,
-        max_tokens=256,
+        max_tokens=1024,
+        guided_json=schema_dict,
     )
     if parsed is not None:
         parsed["name"] = spec["name"]
@@ -95,6 +134,7 @@ async def call_budget_minister(
     client: openai.AsyncOpenAI,
     model: str,
     timeout: float,
+    guided_json: bool = False,
 ) -> dict:
     persona = build_budget_persona(traits)
     user_msg = build_budget_user_message(state_snapshot, sector_outputs)
@@ -103,7 +143,8 @@ async def call_budget_minister(
         system=f"{persona}\n\nSchema:\n{BUDGET_SCHEMA}",
         user=user_msg,
         temperature=0.2,
-        max_tokens=256,
+        max_tokens=512,
+        guided_json=BUDGET_SCHEMA_DICT if guided_json else None,
     )
     return parsed if parsed is not None else {"veto": False, "veto_reason": None, "approved_weights": {}}
 
@@ -118,6 +159,7 @@ async def call_chief(
     timeout: float,
     round_num: int = 1,
     max_rounds: int = 2,
+    guided_json: bool = False,
 ) -> dict | None:
     persona = build_chief_persona(traits)
     user_msg = build_chief_user_message(
@@ -128,7 +170,37 @@ async def call_chief(
         system=f"{persona}\n\nSchema:\n{CHIEF_SCHEMA}",
         user=user_msg,
         temperature=0.2,
+        max_tokens=2048,
+        guided_json=CHIEF_SCHEMA_DICT if guided_json else None,
+    )
+    if parsed is None:
+        return None
+    weights = parsed.get("action_weights", {})
+    parsed["action_weights"] = {
+        a: max(-1.0, min(1.0, float(weights.get(a, 0.0))))
+        for a in ALL_ACTIONS
+    }
+    return parsed
+
+
+async def call_chief_lite(
+    state_snapshot: str,
+    traits: "CulturalTraits",
+    client: openai.AsyncOpenAI,
+    model: str,
+    timeout: float,
+    guided_json: bool = False,
+) -> dict | None:
+    """Single-call chief used when council_off=True. Skips minister debate."""
+    persona = build_chief_lite_persona(traits)
+    user_msg = build_chief_lite_user_message(state_snapshot)
+    parsed = await _call_llm(
+        client, model, timeout,
+        system=f"{persona}\n\nSchema:\n{CHIEF_LITE_SCHEMA}",
+        user=user_msg,
+        temperature=0.2,
         max_tokens=512,
+        guided_json=CHIEF_LITE_SCHEMA_DICT if guided_json else None,
     )
     if parsed is None:
         return None

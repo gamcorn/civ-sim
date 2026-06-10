@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS directives (
     action_weights_json VARCHAR,
     reasoning         VARCHAR,
     emergency         BOOLEAN,
-    issued_at_tick    INTEGER
+    issued_at_tick    INTEGER,
+    success           BOOLEAN
 );
 """
 
@@ -71,14 +72,20 @@ class EventLogger:
         self.flush()
         self._con.close()
 
-    def log_directive(self, tick: int, civ_id: int, directive) -> None:
+    def log_directive(self, tick: int, civ_id: int, directive, success: bool = True) -> None:
         import json
-        self._con.execute(
-            "INSERT INTO directives VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [
-                tick, civ_id, directive.era_goal,
-                json.dumps(directive.action_weights),
-                directive.reasoning, directive.emergency,
-                directive.issued_at_tick,
-            ],
-        )
+        if directive is None:
+            self._con.execute(
+                "INSERT INTO directives VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [tick, civ_id, None, None, None, False, tick, False],
+            )
+        else:
+            self._con.execute(
+                "INSERT INTO directives VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [
+                    tick, civ_id, directive.era_goal,
+                    json.dumps(directive.action_weights),
+                    directive.reasoning, directive.emergency,
+                    directive.issued_at_tick, success,
+                ],
+            )

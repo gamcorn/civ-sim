@@ -9,7 +9,7 @@ import openai
 from agents.providers.base import DecisionProvider
 from agents.decisions import ALL_ACTIONS, GATHER, get_action_scores, get_feasible_actions
 from agents.providers.council_ministers import (
-    call_sector_minister, call_budget_minister, call_chief,
+    call_sector_minister, call_budget_minister, call_chief, call_chief_lite,
 )
 from agents.providers.council_prompts import MINISTER_SPECS, build_civ_state_snapshot
 
@@ -106,11 +106,41 @@ class CouncilProvider(DecisionProvider):
             and tick - self._last_council_tick < self._config.directive_period
         )
         model = cities[0].model
-        state_snapshot = build_civ_state_snapshot(civ, cities, model)
+        fog = getattr(model.config, "fog_of_war", 0.0)
+        state_snapshot = build_civ_state_snapshot(civ, cities, model, fog_of_war=fog)
         sector_model = self._config.sector_model or self._config.model
         chief_model = self._config.chief_model or self._config.model
         timeout = self._config.timeout
+        chief_timeout = self._config.chief_timeout or timeout * 3
+        gj = self._config.guided_json
 
+        # ── council_off: single chief call, skip minister debate ───────
+        if self._config.council_off:
+            chief_output = await call_chief_lite(
+                state_snapshot, civ.traits,
+                self._client, chief_model, chief_timeout,
+                guided_json=gj,
+            )
+            self._last_council_tick = tick
+            if chief_output is None:
+                if hasattr(model, "logger"):
+                    model.logger.log_directive(tick, civ.civ_id, None, success=False)
+                return
+            directive = StrategicDirective(
+                era_goal="",
+                action_weights={a: float(chief_output["action_weights"].get(a, 0.0)) for a in ALL_ACTIONS},
+                reasoning="",
+                issued_at_tick=tick,
+                valid_for_ticks=self._config.directive_period,
+                emergency=is_emergency,
+            )
+            self._directive = directive
+            if hasattr(model, "logger"):
+                model.logger.log_directive(tick, civ.civ_id, directive)
+            self._update_civ_snapshot(civ, cities, tick, is_emergency)
+            return
+
+        # ── Full council: sector ministers → budget → chief ────────────
         sector_outputs: list[dict] = []
         for _round in range(1, self._config.max_rounds + 1):
             prev = (
@@ -120,7 +150,7 @@ class CouncilProvider(DecisionProvider):
             results = await asyncio.gather(*[
                 call_sector_minister(
                     spec, state_snapshot, civ.traits,
-                    self._client, sector_model, timeout, prev,
+                    self._client, sector_model, timeout, prev, gj,
                 )
                 for spec in MINISTER_SPECS
             ], return_exceptions=True)
@@ -128,17 +158,25 @@ class CouncilProvider(DecisionProvider):
 
         budget_output = await call_budget_minister(
             state_snapshot, sector_outputs, civ.traits,
-            self._client, sector_model, timeout,
+            self._client, sector_model, timeout, gj,
         )
         chief_output = await call_chief(
             state_snapshot, sector_outputs, budget_output, civ.traits,
-            self._client, chief_model, timeout,
+            self._client, chief_model, chief_timeout,
             round_num=self._config.max_rounds,
             max_rounds=self._config.max_rounds,
+            guided_json=gj,
         )
 
+        self._last_council_tick = tick
+
         if chief_output is None:
-            self._last_council_tick = tick
+            # Try to salvage a directive from sector weight_requests
+            chief_output = self._synthesize_from_sectors(sector_outputs)
+
+        if chief_output is None:
+            if hasattr(model, "logger"):
+                model.logger.log_directive(tick, civ.civ_id, None, success=False)
             return
 
         directive = StrategicDirective(
@@ -150,16 +188,43 @@ class CouncilProvider(DecisionProvider):
             emergency=is_emergency,
         )
         self._directive = directive
-        self._last_council_tick = tick
         if is_emergency:
             self._last_emergency_tick = tick
 
-        civ._pop_at_last_directive = civ.total_pop
-        civ._techs_at_last_directive = len(civ.discovered_techs)
-        civ._city_count_at_last_directive = len(cities)
+        self._update_civ_snapshot(civ, cities, tick, is_emergency)
 
         if hasattr(model, "logger"):
             model.logger.log_directive(tick, civ.civ_id, directive)
+
+    def _synthesize_from_sectors(self, sector_outputs: list[dict]) -> dict | None:
+        """Build a minimal chief output from sector weight_requests when chief fails."""
+        merged: dict[str, float] = {}
+        count = 0
+        for o in sector_outputs:
+            for action, w in o.get("weight_requests", {}).items():
+                if action in ALL_ACTIONS:
+                    try:
+                        merged[action] = merged.get(action, 0.0) + float(w)
+                        count += 1
+                    except (TypeError, ValueError):
+                        pass
+        if not merged:
+            return None
+        n = max(1, len(sector_outputs))
+        return {
+            "era_goal": "",
+            "action_weights": {a: max(-1.0, min(1.0, merged.get(a, 0.0) / n)) for a in ALL_ACTIONS},
+            "reasoning": "synthesized from sector weights (chief failed)",
+        }
+
+    def _update_civ_snapshot(
+        self, civ: "Civilization", cities: list["CityAgent"], tick: int, is_emergency: bool
+    ) -> None:
+        if is_emergency:
+            self._last_emergency_tick = tick
+        civ._pop_at_last_directive = civ.total_pop
+        civ._techs_at_last_directive = len(civ.discovered_techs)
+        civ._city_count_at_last_directive = len(cities)
 
     def _apply_directive(self, city: "CityAgent") -> str:
         scores = get_action_scores(city)

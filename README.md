@@ -96,11 +96,14 @@ duckdb results.duckdb "SELECT action, count(*) FROM events GROUP BY action ORDER
 | `--sweep` | off | Run Ray parameter sweep |
 | `--n-runs INT` | 100 | Runs for sweep |
 | `--output PATH` | sweep.duckdb | Sweep results file |
-| `--provider` | rule_based | Decision backend: `rule_based`, `openai_compatible`, `anthropic` |
+| `--provider` | rule_based | Decision backend: `rule_based`, `openai_compatible`, `anthropic`, `council` |
 | `--model STR` | meta-llama/Llama-3.1-70B-Instruct | Model name for LLM provider |
 | `--base-url URL` | http://localhost:8000/v1 | Endpoint for OpenAI-compatible provider |
 | `--api-key STR` | EMPTY | API key (use EMPTY for local vLLM/Ollama) |
 | `--config PATH` | — | YAML file with per-civilization provider config |
+| `--council-off` | off | Skip minister debate; single chief-of-staff call only (council providers) |
+| `--guided-json` | off | Use vLLM constrained decoding — required for thinking/CoT models (council providers) |
+| `--fog-of-war F` | 0.0 | Enemy intel noise for council providers: `0.0` = exact, `1.0` = very inaccurate |
 | `--batch-mode` | off | Send all prompts in one `/v1/completions` call (vLLM DGX mode) |
 | `--max-concurrent INT` | 64 | Max concurrent LLM requests when batch-mode is off |
 | `--prompt-template STR` | — | Chat template for completions API (`{system}` / `{user}` placeholders); defaults to Llama-3.1 format |
@@ -145,6 +148,117 @@ python main.py --seed 42 --ticks 200 --no-visualize \
   --model claude-haiku-4-5-20251001 \
   --api-key $ANTHROPIC_API_KEY
 ```
+
+### Council provider (LLM-driven strategic leader)
+
+Each civilization gets a council of advisors that convenes periodically — and on emergency triggers — to issue a `StrategicDirective`: a civ-wide action-weight overlay that biases all city decisions for the next N ticks.
+
+**How it works:** 4 sector ministers (War, Economy, Science, Expansion) deliberate in parallel, a Budget minister reviews their proposals, and a Chief of Staff synthesises a directive. The directive additively shifts the existing rule-based scoring engine — cities still make tactical decisions locally, but the LLM shapes their strategic bias.
+
+**Setup (DGX Spark / any NVIDIA GPU — Nemotron-70B):**
+
+```bash
+# 1. Accept the model license at https://huggingface.co/nvidia/Llama-3.1-Nemotron-70B-Instruct-HF
+# 2. Install vLLM and download the model (~140 GB, one-time)
+bash scripts/setup_llm.sh --hf-token YOUR_HF_TOKEN
+
+# 3. Start the vLLM server (terminal 1)
+bash scripts/start_vllm_council.sh
+
+# 4. Run the simulation (terminal 2)
+python main.py --ticks 200 --no-visualize --config examples/council_dgx.yaml
+```
+
+If Nemotron access is unavailable, add `--fallback-model` to download `meta-llama/Llama-3.3-70B-Instruct` instead.
+
+**Smaller models (Nemotron-Nano-30B or similar):**
+
+```bash
+# Start the vLLM server (terminal 1)
+bash scripts/start_vllm_nano.sh
+
+# Run the simulation (terminal 2)
+python main.py --ticks 200 --no-visualize --config examples/council_nano.yaml
+```
+
+`council_nano.yaml` sets `guided_json: true` and `chief_timeout: 30.0` — both needed for chain-of-thought / thinking models that output reasoning before JSON.
+
+**Council-specific flags:**
+
+| Flag | Description |
+|---|---|
+| `--guided-json` | Enable vLLM constrained decoding. Required for thinking/CoT models (e.g. Nemotron-Nano) that prefix their response with reasoning text. Forces token-level JSON structure. |
+| `--council-off` | Skip the 4-minister debate; send a single call directly to the Chief of Staff. Useful for benchmarking or when latency matters more than deliberation depth. |
+
+Both flags override all `civ_providers` entries of type `council` in the YAML. They can also be set per-provider in the YAML (`guided_json: true`, `council_off: true`).
+
+**Enemy intelligence and fog of war**
+
+Each council session includes an intelligence report showing the enemy civilization's known stats:
+
+```
+Intelligence Report:
+  Beta: pop 142 | military 38 | cities 3 | tech 2 | territory 67 tiles
+```
+
+`--fog-of-war F` adds multiplicative noise to every enemy figure before it reaches the ministers. At `F=0.3` a reported population of 100 could appear anywhere from 70 to 130; at `F=1.0` the range is effectively 0–200% of the true value. Noise is seeded from the same RNG as the rest of the simulation, so runs are still reproducible.
+
+```bash
+# Moderate fog — enemy stats are roughly right but not exact
+python main.py --provider council --ticks 200 --no-visualize \
+  --model meta-llama/Llama-3.1-70B-Instruct \
+  --fog-of-war 0.3
+
+# High fog — ministers work from unreliable intel
+python main.py --provider council --ticks 200 --no-visualize \
+  --model meta-llama/Llama-3.1-70B-Instruct \
+  --fog-of-war 0.8
+```
+
+Approximate values are rendered with a `~` prefix in the prompt (`pop ~107 | military ~44 ...`) so the LLM is explicitly told the figures are estimates.
+
+**Emergency triggers** cause early council sessions (with a 3-tick cooldown):
+
+| Trigger | Condition |
+|---|---|
+| Food crisis | Mean city food stock < 10 |
+| Military threat | Enemy military > 2× ours |
+| City captured | City count dropped since last directive |
+| Population collapse | Total pop < 80% of pop at last directive |
+| Tech unlock | New technology discovered |
+
+**Tune session frequency** in the YAML config:
+
+```yaml
+directive_period: 10      # ticks between scheduled sessions
+max_rounds: 2             # debate rounds per session
+emergency_triggers: true  # enable event-based early refresh
+```
+
+**Query council behavior after a run:**
+
+```bash
+# Directive success rate
+duckdb results.duckdb "
+  SELECT civ_id, success, COUNT(*) as n
+  FROM directives
+  GROUP BY civ_id, success
+  ORDER BY civ_id, success
+"
+
+# Goals and strategy per civilization
+duckdb results.duckdb "
+  SELECT civ_id, era_goal, emergency, COUNT(*) as sessions
+  FROM directives
+  WHERE success
+  GROUP BY civ_id, era_goal, emergency
+  ORDER BY sessions DESC
+"
+```
+
+All council LLM calls have silent fallbacks — a timed-out or erroring minister is skipped; a failed Chief of Staff leaves the previous directive active. The simulation never halts.
+
+---
 
 ### LLM vs rule-based head-to-head (per-civilization config)
 
@@ -400,7 +514,7 @@ python main.py --sweep --n-runs 10000 --output dgx_sweep.duckdb \
 python -m pytest tests/ -v
 ```
 
-All 202 tests should pass. The suite covers the grid, events, logger, civilization state, decision engine, city actions and lifecycle, tech tree, all three LLM providers (mocked), provider factory, model dispatch loop, batch completions path, Ray sweep runner, grid backend abstraction, snapshot writer/reader round-trips, CivModel snapshot integration, and replay player helpers and renderer duck-typing.
+All 229 tests should pass. The suite covers the grid, events, logger, civilization state, decision engine, city actions and lifecycle, tech tree, all four LLM providers (mocked), provider factory, council minister functions, council provider triggers and directive application, council integration end-to-end, model dispatch loop, batch completions path, Ray sweep runner, grid backend abstraction, snapshot writer/reader round-trips, CivModel snapshot integration, and replay player helpers and renderer duck-typing.
 
 ---
 
@@ -408,7 +522,7 @@ All 202 tests should pass. The suite covers the grid, events, logger, civilizati
 
 ```
 civ-sim/
-├── config.py             # All simulation parameters
+├── config.py             # All simulation parameters (SimConfig + ProviderConfig)
 ├── main.py               # CLI entry point
 ├── world/                # Resource grid + environmental events
 ├── agents/
@@ -416,12 +530,22 @@ civ-sim/
 │   ├── civilization.py   # Civilization state + cultural traits
 │   ├── decisions.py      # Rule-based weighted scoring engine
 │   └── providers/        # Swappable LLM / rule-based backends
+│       ├── council_provider.py   # CouncilProvider + StrategicDirective
+│       ├── council_ministers.py  # Async sector / budget / chief minister calls
+│       └── council_prompts.py    # Persona builders, state snapshot, JSON schemas
 ├── technology/           # Emergent tech tree
 ├── simulation/           # Mesa model + Ray sweep runner
 ├── storage/              # DuckDB event logger + snapshot writer/reader
 ├── visualization/        # Live matplotlib + ANSI terminal renderers
+├── scripts/
+│   ├── setup_llm.sh           # One-time vLLM + model download setup
+│   ├── start_vllm_council.sh  # Launch vLLM server for Nemotron-70B (auto-detects GPU count)
+│   └── start_vllm_nano.sh     # Launch vLLM server for Nemotron-Nano-30B
+├── examples/
+│   ├── council_dgx.yaml   # Council config for DGX Spark (Nemotron-70B)
+│   └── council_nano.yaml  # Council config for Nemotron-Nano-30B (guided_json + chief_timeout)
 ├── replay.py             # Interactive replay player for completed runs
-└── tests/                # pytest suite
+└── tests/                # pytest suite (229 tests)
 ```
 
 See `CLAUDE.md` for architecture details, Mesa 3.x gotchas, and design decisions.

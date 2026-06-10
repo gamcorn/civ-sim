@@ -45,7 +45,11 @@ def make_mock_city(
     # Enemy civ
     enemy_civ = MagicMock()
     enemy_civ.civ_id = 1 - civ_id
+    enemy_civ.name = "Beta"
+    enemy_civ.total_pop = 0
     enemy_civ.total_military = enemy_military
+    enemy_civ.city_count = 1
+    enemy_civ.tech_level = 0
 
     # Grid
     grid = MagicMock()
@@ -72,6 +76,7 @@ def make_mock_city(
     model.steps = tick
     model.config.resource_max = 100.0
     model.config.harvest_radius = 5
+    model.config.fog_of_war = 0.0
     model.grid = grid
     model.civilizations = [civ, enemy_civ]
     # agents_by_type returns empty by default (no trade partners, no attack targets)

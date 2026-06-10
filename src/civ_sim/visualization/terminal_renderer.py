@@ -70,8 +70,8 @@ class TerminalRenderer:
         self.map_cols = model.config.width  // self.scale_x
         self.map_rows = model.config.height // self.scale_y
 
-        # Clear once; subsequent updates home the cursor instead
-        sys.stdout.write("\033[2J")
+        # Clear once; home cursor so init text and first update start from row 1
+        sys.stdout.write("\033[2J\033[H")
         sys.stdout.flush()
 
     # ------------------------------------------------------------------

@@ -25,13 +25,14 @@ def test_log_directive_inserts_row(mem_logger):
     mem_logger.log_directive(tick=5, civ_id=0, directive=d)
     rows = mem_logger._con.execute("SELECT * FROM directives").fetchall()
     assert len(rows) == 1
-    tick, civ_id, era_goal, weights_json, reasoning, emergency, issued_at_tick = rows[0]
+    tick, civ_id, era_goal, weights_json, reasoning, emergency, issued_at_tick, success = rows[0]
     assert tick == 5
     assert civ_id == 0
     assert era_goal == "Expand east"
     weights = json.loads(weights_json)
     assert weights["expand"] == 0.8
     assert emergency is False
+    assert success is True
 
 
 def test_log_directive_emergency_flag(mem_logger):

@@ -58,6 +58,21 @@ def test_build_civ_state_snapshot_contains_key_fields():
     assert "30" in snapshot    # military
 
 
+def test_build_civ_state_snapshot_contains_enemy_intel():
+    city = make_mock_city(pop=200, military=30, food_stock=100.0, tick=15)
+    snapshot = build_civ_state_snapshot(city.civ, [city], city.model)
+    assert "Intelligence Report:" in snapshot
+    assert "Beta" in snapshot
+
+
+def test_build_civ_state_snapshot_fog_marks_approximate():
+    city = make_mock_city(pop=200, military=30, food_stock=100.0, tick=15)
+    city.model.random.uniform.return_value = 1.2
+    snapshot = build_civ_state_snapshot(city.civ, [city], city.model, fog_of_war=0.5)
+    assert "fog=50%" in snapshot
+    assert "~" in snapshot
+
+
 def test_build_sector_user_message_includes_state():
     city = make_mock_city()
     snapshot = build_civ_state_snapshot(city.civ, [city], city.model)

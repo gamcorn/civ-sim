@@ -8,7 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 VENV="$PROJECT_DIR/.venv"
-PRIMARY_MODEL="nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"
+PRIMARY_MODEL="RedHatAI/Llama-3.1-Nemotron-70B-Instruct-HF-FP8-dynamic"
 FALLBACK_MODEL="meta-llama/Llama-3.3-70B-Instruct"
 HF_TOKEN=""
 USE_FALLBACK=0
@@ -65,11 +65,11 @@ fi
 # 4. HuggingFace login
 if [[ -n "$HF_TOKEN" ]]; then
   echo "[4/5] Logging in to HuggingFace..."
-  "$VENV/bin/python" -c "from huggingface_hub import login; login(token='$HF_TOKEN')"
+  "$VENV/bin/hf" auth login --token "$HF_TOKEN"
   echo "  OK: logged in"
 else
   echo "[4/5] HuggingFace login (skipped — pass --hf-token TOKEN to automate)"
-  echo "  If model download fails, run: .venv/bin/python -m huggingface_hub.commands.huggingface_cli login"
+  echo "  If model download fails, run: .venv/bin/hf auth login"
 fi
 
 # 5. Download model
@@ -83,9 +83,8 @@ print('yes' if r and r != 'not_in_cache_or_no_result' else 'no')
 if [[ "$CACHED" == "yes" ]]; then
   echo "  OK: model already cached, skipping download"
 else
-  echo "  Downloading (~140 GB, this will take a while)..."
-  if ! "$VENV/bin/python" -m huggingface_hub.commands.huggingface_cli download \
-      "$MODEL_ID" --repo-type model; then
+  echo "  Downloading (~70 GB fp8 pre-quantized, this will take a while)..."
+  if ! "$VENV/bin/hf" download "$MODEL_ID" --repo-type model; then
     echo ""
     echo "  FAILED to download $MODEL_ID"
     if [[ "$MODEL_ID" == "$PRIMARY_MODEL" ]]; then

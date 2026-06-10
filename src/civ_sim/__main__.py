@@ -8,6 +8,7 @@ Usage:
 """
 
 import argparse
+import os
 import sys
 
 from config import SimConfig
@@ -55,6 +56,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--sweep",        action="store_true")
     p.add_argument("--n-runs",       type=int, default=100)
     p.add_argument("--output",       type=str, default="sweep.duckdb")
+    p.add_argument("--council-off",  action="store_true",
+                   help="Skip minister debate; use single chief call (council providers only)")
+    p.add_argument("--guided-json",  action="store_true",
+                   help="Use vLLM guided JSON constrained decoding (council providers only)")
+    p.add_argument("--fog-of-war",   type=float, default=0.0, metavar="F",
+                   help="Enemy intel noise for council providers: 0.0=exact, 1.0=very inaccurate")
     return p.parse_args()
 
 
@@ -70,6 +77,7 @@ def main():
         db_path=args.db,
         snapshot_interval=args.snapshot_interval,
         visualize=not args.no_visualize,
+        fog_of_war=max(0.0, min(1.0, args.fog_of_war)),
         num_sweep_workers=args.workers,
         grid_backend=args.grid_backend,
     )
@@ -100,6 +108,14 @@ def main():
                   file=sys.stderr)
         cfg.civ_providers = [provider_cfg] * cfg.num_civs
 
+    # Apply CLI overrides to all council providers
+    for p in cfg.civ_providers:
+        if p.type == "council":
+            if args.council_off:
+                p.council_off = True
+            if args.guided_json:
+                p.guided_json = True
+
     if args.sweep:
         from simulation.runner import run_sweep
         print(f"Starting sweep: {args.n_runs} runs → {args.output}")
@@ -112,10 +128,20 @@ def main():
     model = CivModel(cfg)
     renderer = None
 
-    if args.terminal_viz:
+    # Auto-detect: in SSH without X forwarding, prefer terminal renderer over GUI.
+    # X forwarding shows DISPLAY as "localhost:N.M"; a local desktop shows ":N".
+    _ssh = bool(os.environ.get("SSH_TTY") or os.environ.get("SSH_CLIENT"))
+    _display = os.environ.get("DISPLAY", "")
+    _local_display = _display and not _display.startswith("localhost:")
+    _want_terminal = args.terminal_viz or (_ssh and _local_display)
+
+    if _want_terminal:
         try:
             from visualization.terminal_renderer import TerminalRenderer
             renderer = TerminalRenderer(model)
+            if not args.terminal_viz:
+                print("[info] SSH session with local display detected — using terminal renderer",
+                      file=sys.stderr)
         except Exception as e:
             print(f"[warn] Terminal visualization failed: {e}", file=sys.stderr)
     elif cfg.visualize:
