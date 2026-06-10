@@ -218,8 +218,8 @@ def test_feasible_excludes_attack_when_military_below_5():
 
 
 def test_feasible_excludes_research_when_resources_low():
-    """RESEARCH requires wood > 10 and minerals > 5; with low values it is excluded."""
-    city = make_mock_city(wood=5.0, minerals=3.0)
+    """RESEARCH requires wood_stock >= research_wood_cost and mineral_stock >= research_mineral_cost."""
+    city = make_mock_city(wood_stock=3.0, mineral_stock=2.0)
     feasible = get_feasible_actions(city)
     assert RESEARCH not in feasible
 
