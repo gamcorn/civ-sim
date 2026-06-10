@@ -89,3 +89,22 @@ def test_all_events_fire_when_all_probs_one(cfg, grid):
     sampler = EventSampler(cfg, random.Random(0))
     events = sampler.sample(grid)
     assert len(events) == 4
+
+
+def test_climate_shift_reduces_regen_not_tile_data(mini_model):
+    """After a climate shift, grid regen is throttled but existing tile food is untouched."""
+    from civ_sim.world.resources import ResourceType
+    mini_model.grid.layers[ResourceType.FOOD].data[:] = 50.0
+    mini_model._climate_penalty_ticks = 1
+
+    food_before = float(mini_model.grid.layers[ResourceType.FOOD].data.sum())
+    mini_model.grid.step(food_regen_mult=0.85)
+    food_after = float(mini_model.grid.layers[ResourceType.FOOD].data.sum())
+
+    assert food_after >= food_before, (
+        f"Climate shift must not destroy tile food; before={food_before:.1f} after={food_after:.1f}"
+    )
+    full_regen = mini_model.config.food_regen * mini_model.config.resource_max * mini_model.grid.width * mini_model.grid.height
+    assert (food_after - food_before) < full_regen, (
+        "Climate-penalised regen should be less than full regen"
+    )

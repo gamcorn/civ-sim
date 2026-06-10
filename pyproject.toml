@@ -38,6 +38,7 @@ where = ["src"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "-q"
+pythonpath = ["src"]
 
 [tool.coverage.run]
 source = ["src/civ_sim"]

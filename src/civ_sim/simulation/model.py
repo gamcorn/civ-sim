@@ -68,11 +68,15 @@ class CivModel(mesa.Model):
     # ------------------------------------------------------------------
 
     def step(self) -> None:
-        # Reset per-tick attack events
         self._attack_events = []
 
-        # 1. Resource regeneration
-        self.grid.step()
+        # Compute climate penalty for this tick's regen BEFORE grid.step()
+        food_regen_mult = 0.85 if self._climate_penalty_ticks > 0 else 1.0
+        if self._climate_penalty_ticks > 0:
+            self._climate_penalty_ticks -= 1
+
+        # 1. Resource regeneration (with optional climate dampening)
+        self.grid.step(food_regen_mult=food_regen_mult)
 
         # 2. Border pressure — contested tiles revert to unclaimed
         self._apply_border_reversion()
@@ -81,13 +85,6 @@ class CivModel(mesa.Model):
         events = self.event_sampler.sample(self.grid)
         if any(e.name == "climate_shift" for e in events):
             self._climate_penalty_ticks = 20
-
-        if self._climate_penalty_ticks > 0:
-            # Temporarily suppress food regen via a one-tick multiplier
-            self.grid.layers[
-                __import__("world.resources", fromlist=["ResourceType"]).ResourceType.FOOD
-            ].data *= 0.85
-            self._climate_penalty_ticks -= 1
 
         disease_events = [e for e in events if e.name == "disease"]
         if disease_events:
