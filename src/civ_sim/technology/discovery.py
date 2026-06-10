@@ -2,9 +2,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agents.city import CityAgent
+    from civ_sim.agents.city import CityAgent
 
-from world.resources import ResourceType
+from civ_sim.world.resources import ResourceType
 
 # Each entry: tech_name → {prerequisite_tech_or_resource: threshold}
 # String keys prefixed with "tech:" mean a discovered tech is required.

@@ -3,7 +3,7 @@ import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agents.city import CityAgent
+    from civ_sim.agents.city import CityAgent
 
 SYSTEM_PROMPT = (
     "You are the strategic advisor for a city in a civilization simulation.\n"

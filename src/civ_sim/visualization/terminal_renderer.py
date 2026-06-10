@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
-    from simulation.model import CivModel
+    from civ_sim.simulation.model import CivModel
 
 # ANSI helpers
 _RESET = "\033[0m"
@@ -124,7 +124,7 @@ class TerminalRenderer:
         lines.append("")
 
         # ── Map ───────────────────────────────────────────────────────────
-        from world.resources import ResourceType
+        from civ_sim.world.resources import ResourceType
         ownership = np.array(model.grid.ownership)
         food = np.asarray(model.grid.layers[ResourceType.FOOD].data)  # host copy, works for both numpy and cupy
         max_r = float(model.config.resource_max)

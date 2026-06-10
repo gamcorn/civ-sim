@@ -4,9 +4,9 @@ import json
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agents.civilization import Civilization, CulturalTraits
-    from agents.city import CityAgent
-    from simulation.model import CivModel
+    from civ_sim.agents.civilization import Civilization, CulturalTraits
+    from civ_sim.agents.city import CityAgent
+    from civ_sim.simulation.model import CivModel
 
 
 MINISTER_SPECS: list[dict] = [
@@ -189,7 +189,7 @@ def build_civ_state_snapshot(
     civ: "Civilization", cities: list["CityAgent"], model: "CivModel",
     fog_of_war: float = 0.0,
 ) -> str:
-    from world.resources import ResourceType
+    from civ_sim.world.resources import ResourceType
     if not cities:
         return f"Civilization: {civ.name} — no cities remaining."
     total_pop = sum(c.population for c in cities)

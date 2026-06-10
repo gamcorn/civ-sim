@@ -13,7 +13,7 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 
 if TYPE_CHECKING:
-    from simulation.model import CivModel
+    from civ_sim.simulation.model import CivModel
 
 # Territory map colors per civ_id (-1 = unclaimed)
 _MAP_COLORS: dict[int, tuple] = {
@@ -182,7 +182,7 @@ class Renderer:
     # ------------------------------------------------------------------
 
     def update(self, model: "CivModel") -> None:
-        from agents.city import CityAgent
+        from civ_sim.agents.city import CityAgent
 
         # ── Map ───────────────────────────────────────────────────────
         self.im.set_data(self._build_rgb(model).transpose(1, 0, 2))
@@ -274,7 +274,7 @@ class Renderer:
 
     def _build_rgb(self, model: "CivModel") -> np.ndarray:
         """(W, H, 3) float32: ownership color modulated by food brightness."""
-        from world.resources import ResourceType
+        from civ_sim.world.resources import ResourceType
         food      = model.grid.layers[ResourceType.FOOD].data
         ownership = model.grid.ownership
         max_r     = model.config.resource_max

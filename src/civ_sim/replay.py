@@ -90,7 +90,7 @@ def _read_keys_raw(key_q: queue.Queue) -> None:
 
 
 def replay_terminal(reader, from_tick: int, speed: float) -> None:
-    from visualization.terminal_renderer import TerminalRenderer
+    from civ_sim.visualization.terminal_renderer import TerminalRenderer
     import termios
 
     ticks = reader.ticks()
@@ -155,7 +155,7 @@ def replay_terminal(reader, from_tick: int, speed: float) -> None:
 try:
     import matplotlib.pyplot as plt
     from matplotlib.animation import FuncAnimation
-    from visualization.renderer import Renderer
+    from civ_sim.visualization.renderer import Renderer
     _MPL_AVAILABLE = True
 except Exception:
     _MPL_AVAILABLE = False
@@ -233,7 +233,7 @@ def main() -> None:
                    help="Playback speed in frames/sec (default: 1.0)")
     args = p.parse_args()
 
-    from storage.snapshot import SnapshotReader
+    from civ_sim.storage.snapshot import SnapshotReader
     reader = SnapshotReader(args.db_path)
 
     renderer = args.renderer

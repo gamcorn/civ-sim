@@ -3,8 +3,8 @@ import dataclasses
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from world.grid import ResourceGrid
-    from config import SimConfig
+    from civ_sim.world.grid import ResourceGrid
+    from civ_sim.config import SimConfig
 
 
 @dataclasses.dataclass
@@ -55,7 +55,7 @@ class EventSampler:
         cy = self._rng.randint(0, grid.height - 1)
         x0, x1 = max(0, cx - 5), min(grid.width, cx + 5)
         y0, y1 = max(0, cy - 5), min(grid.height, cy + 5)
-        from world.resources import ResourceType
+        from civ_sim.world.resources import ResourceType
         grid.layers[ResourceType.FOOD].data[x0:x1, y0:y1] *= 0.5
         return EnvEvent("drought", f"Drought at ({cx},{cy}) halves food in region")
 
@@ -64,7 +64,7 @@ class EventSampler:
         cy = self._rng.randint(0, grid.height - 1)
         x0, x1 = max(0, cx - 3), min(grid.width, cx + 3)
         y0, y1 = max(0, cy - 3), min(grid.height, cy + 3)
-        from world.resources import ResourceType
+        from civ_sim.world.resources import ResourceType
         import numpy as np
         grid.layers[ResourceType.MINERALS].data[x0:x1, y0:y1] = np.minimum(
             grid.layers[ResourceType.MINERALS].data[x0:x1, y0:y1] * 3,

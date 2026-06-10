@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agents.city import CityAgent
+    from civ_sim.agents.city import CityAgent
 
 
 # Action names
@@ -46,7 +46,7 @@ def choose_action(agent: "CityAgent") -> str:
 
 
 def _resource_modifier(action: str, agent: "CityAgent") -> float:
-    from world.resources import ResourceType
+    from civ_sim.world.resources import ResourceType
 
     minerals = agent.model.grid.get(agent.x, agent.y, ResourceType.MINERALS)
     wood = agent.model.grid.get(agent.x, agent.y, ResourceType.WOOD)
@@ -88,7 +88,7 @@ def _resource_modifier(action: str, agent: "CityAgent") -> float:
         defense = _territorial_threat(agent) * 0.8
         return military_mod + desperation + defense
     if action == RESEARCH:
-        from technology.discovery import TECH_TREE
+        from civ_sim.technology.discovery import TECH_TREE
         if len(agent.civ.discovered_techs) >= len(TECH_TREE):
             return -1.0  # nothing left to discover
         return (wood / max_r + min_ratio) * 0.3 - 0.1
@@ -123,7 +123,7 @@ def _feasible(agent: "CityAgent", scores: dict[str, float]) -> dict[str, float]:
         feasible[ATTACK] = scores[ATTACK]
 
     # Research: needs minimal wood and minerals
-    from world.resources import ResourceType
+    from civ_sim.world.resources import ResourceType
     has_resources = (
         agent.model.grid.get(agent.x, agent.y, ResourceType.WOOD) > 10
         and agent.model.grid.get(agent.x, agent.y, ResourceType.MINERALS) > 5

@@ -4,15 +4,15 @@ from typing import TYPE_CHECKING
 
 from mesa.discrete_space import Grid2DMovingAgent
 
-from agents.decisions import (
+from civ_sim.agents.decisions import (
     choose_action, GATHER, TRADE, EXPAND, FORTIFY, ATTACK, RESEARCH,
     _attack_target, _has_unclaimed_neighbor,
 )
-from world.resources import ResourceType
+from civ_sim.world.resources import ResourceType
 
 if TYPE_CHECKING:
-    from agents.civilization import Civilization
-    from simulation.model import CivModel
+    from civ_sim.agents.civilization import Civilization
+    from civ_sim.simulation.model import CivModel
 
 
 class CityAgent(Grid2DMovingAgent):
@@ -257,7 +257,7 @@ class CityAgent(Grid2DMovingAgent):
         )
 
     def _do_research(self) -> None:
-        from technology.discovery import TechEngine
+        from civ_sim.technology.discovery import TechEngine
         self.model.tech_engine.check(self)
 
     def _collapse(self) -> None:

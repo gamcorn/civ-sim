@@ -6,17 +6,17 @@ from typing import TYPE_CHECKING
 
 import openai
 
-from agents.providers.base import DecisionProvider
-from agents.decisions import ALL_ACTIONS, GATHER, get_action_scores, get_feasible_actions
-from agents.providers.council_ministers import (
+from civ_sim.agents.providers.base import DecisionProvider
+from civ_sim.agents.decisions import ALL_ACTIONS, GATHER, get_action_scores, get_feasible_actions
+from civ_sim.agents.providers.council_ministers import (
     call_sector_minister, call_budget_minister, call_chief, call_chief_lite,
 )
-from agents.providers.council_prompts import MINISTER_SPECS, build_civ_state_snapshot
+from civ_sim.agents.providers.council_prompts import MINISTER_SPECS, build_civ_state_snapshot
 
 if TYPE_CHECKING:
-    from agents.city import CityAgent
-    from agents.civilization import Civilization
-    from config import ProviderConfig
+    from civ_sim.agents.city import CityAgent
+    from civ_sim.agents.civilization import Civilization
+    from civ_sim.config import ProviderConfig
 
 
 @dataclasses.dataclass
@@ -39,7 +39,7 @@ class CouncilProvider(DecisionProvider):
             base_url=config.base_url,
             api_key=config.api_key,
         )
-        from agents.providers.rule_based import RuleBasedProvider as _RBP
+        from civ_sim.agents.providers.rule_based import RuleBasedProvider as _RBP
         self._fallback = _RBP()
 
     async def choose_actions_batch(self, cities: list["CityAgent"]) -> list[str]:

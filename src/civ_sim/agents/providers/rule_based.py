@@ -1,11 +1,11 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-from agents.providers.base import DecisionProvider
-from agents.decisions import choose_action
+from civ_sim.agents.providers.base import DecisionProvider
+from civ_sim.agents.decisions import choose_action
 
 if TYPE_CHECKING:
-    from agents.city import CityAgent
+    from civ_sim.agents.city import CityAgent
 
 
 class RuleBasedProvider(DecisionProvider):

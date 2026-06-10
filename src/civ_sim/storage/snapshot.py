@@ -90,8 +90,8 @@ class SnapshotWriter:
         self._con.execute(_CREATE_SQL)
 
     def write(self, tick: int, grid, agents, civilizations) -> None:
-        from agents.city import CityAgent
-        from world.resources import ResourceType
+        from civ_sim.agents.city import CityAgent
+        from civ_sim.world.resources import ResourceType
 
         ownership = np.asarray(grid.ownership).astype(np.int8)
         food = np.asarray(grid.layers[ResourceType.FOOD].data).astype(np.float32)
@@ -156,7 +156,7 @@ class SnapshotReader:
             return []
 
     def load(self, tick: int) -> ReplayFrame:
-        from world.resources import ResourceType
+        from civ_sim.world.resources import ResourceType
 
         row = self._con.execute(
             "SELECT ownership, food, width, height, resource_max, cities, civs "

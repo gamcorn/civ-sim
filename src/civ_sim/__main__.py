@@ -11,7 +11,7 @@ import argparse
 import os
 import sys
 
-from config import SimConfig
+from civ_sim.config import SimConfig
 
 
 def parse_args() -> argparse.Namespace:
@@ -82,7 +82,7 @@ def main():
         grid_backend=args.grid_backend,
     )
 
-    from config import ProviderConfig
+    from civ_sim.config import ProviderConfig
 
     if args.config:
         import yaml
@@ -117,13 +117,13 @@ def main():
                 p.guided_json = True
 
     if args.sweep:
-        from simulation.runner import run_sweep
+        from civ_sim.simulation.runner import run_sweep
         print(f"Starting sweep: {args.n_runs} runs → {args.output}")
         run_sweep(args.n_runs, cfg, args.output, num_workers=args.workers)
         return
 
     # Single run
-    from simulation.model import CivModel
+    from civ_sim.simulation.model import CivModel
 
     model = CivModel(cfg)
     renderer = None
@@ -137,7 +137,7 @@ def main():
 
     if _want_terminal:
         try:
-            from visualization.terminal_renderer import TerminalRenderer
+            from civ_sim.visualization.terminal_renderer import TerminalRenderer
             renderer = TerminalRenderer(model)
             if not args.terminal_viz:
                 print("[info] SSH session with local display detected — using terminal renderer",
@@ -146,13 +146,13 @@ def main():
             print(f"[warn] Terminal visualization failed: {e}", file=sys.stderr)
     elif cfg.visualize:
         try:
-            from visualization.renderer import Renderer
+            from civ_sim.visualization.renderer import Renderer
             renderer = Renderer(model)
         except Exception as e:
             print(f"[warn] matplotlib display unavailable ({e}); falling back to terminal view",
                   file=sys.stderr)
             try:
-                from visualization.terminal_renderer import TerminalRenderer
+                from civ_sim.visualization.terminal_renderer import TerminalRenderer
                 renderer = TerminalRenderer(model)
             except Exception as e2:
                 print(f"[warn] Terminal visualization also failed: {e2}", file=sys.stderr)

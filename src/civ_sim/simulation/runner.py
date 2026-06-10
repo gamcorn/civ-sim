@@ -8,8 +8,8 @@ try:
 except ImportError:
     ray = None  # type: ignore[assignment]
 
-from config import SimConfig
-from simulation.model import CivModel
+from civ_sim.config import SimConfig
+from civ_sim.simulation.model import CivModel
 
 
 def run_single(config: SimConfig, renderer=None) -> dict:

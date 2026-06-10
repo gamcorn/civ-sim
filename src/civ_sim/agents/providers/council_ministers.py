@@ -6,8 +6,8 @@ from typing import Any, TYPE_CHECKING
 
 import openai
 
-from agents.decisions import ALL_ACTIONS
-from agents.providers.council_prompts import (
+from civ_sim.agents.decisions import ALL_ACTIONS
+from civ_sim.agents.providers.council_prompts import (
     SECTOR_SCHEMA, SECTOR_SCHEMA_DICT, build_sector_schema_dict, build_sector_schema_str,
     BUDGET_SCHEMA, BUDGET_SCHEMA_DICT,
     CHIEF_SCHEMA, CHIEF_SCHEMA_DICT,
@@ -18,7 +18,7 @@ from agents.providers.council_prompts import (
 )
 
 if TYPE_CHECKING:
-    from agents.civilization import CulturalTraits
+    from civ_sim.agents.civilization import CulturalTraits
 
 
 def _parse_json_safe(raw: str) -> dict[str, Any] | None:

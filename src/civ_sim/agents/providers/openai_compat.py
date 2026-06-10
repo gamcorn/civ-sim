@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING
 
 import openai
 
-from agents.providers.base import DecisionProvider
-from agents.providers.prompt import SYSTEM_PROMPT, build_prompt, parse_response
-from agents.decisions import choose_action, get_feasible_actions
+from civ_sim.agents.providers.base import DecisionProvider
+from civ_sim.agents.providers.prompt import SYSTEM_PROMPT, build_prompt, parse_response
+from civ_sim.agents.decisions import choose_action, get_feasible_actions
 
 if TYPE_CHECKING:
-    from agents.city import CityAgent
-    from config import ProviderConfig
+    from civ_sim.agents.city import CityAgent
+    from civ_sim.config import ProviderConfig
 
 # Default chat template for Llama-3.1-Instruct / vLLM.
 # Override via ProviderConfig.prompt_template for other model families.

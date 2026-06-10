@@ -6,14 +6,14 @@ import random as stdlib_random
 import mesa
 import numpy as np
 
-from config import SimConfig
-from world.grid import ResourceGrid
-from world.events import EventSampler
-from world.resources import ResourceType
-from agents.civilization import Civilization, CulturalTraits
-from agents.city import CityAgent
-from technology.discovery import TechEngine
-from storage.logger import EventLogger
+from civ_sim.config import SimConfig
+from civ_sim.world.grid import ResourceGrid
+from civ_sim.world.events import EventSampler
+from civ_sim.world.resources import ResourceType
+from civ_sim.agents.civilization import Civilization, CulturalTraits
+from civ_sim.agents.city import CityAgent
+from civ_sim.technology.discovery import TechEngine
+from civ_sim.storage.logger import EventLogger
 
 
 class CivModel(mesa.Model):
@@ -38,7 +38,7 @@ class CivModel(mesa.Model):
         self.tech_engine = TechEngine()
         self.logger = EventLogger(config.db_path, config.rng_seed, config.db_flush_interval)
 
-        from storage.snapshot import SnapshotWriter
+        from civ_sim.storage.snapshot import SnapshotWriter
         self._snapshot_writer = (
             SnapshotWriter(config.db_path, config.rng_seed)
             if config.snapshot_interval > 0
@@ -152,7 +152,7 @@ class CivModel(mesa.Model):
     async def _dispatch_decisions(self) -> None:
         """Batch all city decisions by provider, run LLM providers concurrently."""
         from collections import defaultdict
-        from agents.city import CityAgent
+        from civ_sim.agents.city import CityAgent
 
         by_provider: dict = defaultdict(list)
         for agent in self.agents:
@@ -229,7 +229,7 @@ class CivModel(mesa.Model):
 
     def _find_settle_location(self, civ: "Civilization") -> tuple[int, int] | None:
         """Return an unclaimed frontier tile at least 6 tiles from every same-civ city."""
-        from agents.city import CityAgent
+        from civ_sim.agents.city import CityAgent
         own_positions = [(a.x, a.y) for a in self.agents if isinstance(a, CityAgent) and a.civ is civ]
         ownership = np.asarray(self.grid.ownership)
         owned = ownership == civ.civ_id
@@ -257,7 +257,7 @@ class CivModel(mesa.Model):
     def _create_civs(self) -> list[Civilization]:
         cfg = self.config
         if not cfg.civ_providers:
-            from config import ProviderConfig
+            from civ_sim.config import ProviderConfig
             cfg.civ_providers = [ProviderConfig()]
         rng = self.random
         civs = []
@@ -271,7 +271,7 @@ class CivModel(mesa.Model):
                 tribalism=rng.uniform(lo, hi),
                 risk_tolerance=rng.uniform(lo, hi),
             )
-            from agents.providers.factory import create_provider
+            from civ_sim.agents.providers.factory import create_provider
             provider_cfg = (
                 cfg.civ_providers[i]
                 if i < len(cfg.civ_providers)
@@ -297,7 +297,7 @@ class CivModel(mesa.Model):
                     x = rng.randint(x_min, x_max)
                     y = rng.randint(5, cfg.height - 5)
                     # Avoid placing two cities too close together
-                    from agents.city import CityAgent as _CA
+                    from civ_sim.agents.city import CityAgent as _CA
                     too_close = any(
                         abs(a.x - x) + abs(a.y - y) < 8
                         for a in self.agents

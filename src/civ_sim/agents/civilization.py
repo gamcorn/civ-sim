@@ -40,7 +40,7 @@ class Civilization:
         self.traits = traits
 
         if provider is None:
-            from agents.providers.rule_based import RuleBasedProvider
+            from civ_sim.agents.providers.rule_based import RuleBasedProvider
             provider = RuleBasedProvider()
         self.provider = provider
 
