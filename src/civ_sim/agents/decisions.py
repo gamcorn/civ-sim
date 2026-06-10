@@ -97,10 +97,11 @@ def _resource_modifier(action: str, agent: "CityAgent") -> float:
 
 
 def _enemy_military(agent: "CityAgent") -> int:
-    for civ in agent.model.civilizations:
-        if civ.civ_id != agent.civ.civ_id:
-            return civ.total_military
-    return 0
+    return sum(
+        civ.total_military
+        for civ in agent.model.civilizations
+        if civ.civ_id != agent.civ.civ_id
+    )
 
 
 def _feasible(agent: "CityAgent", scores: dict[str, float]) -> dict[str, float]:

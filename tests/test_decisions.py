@@ -243,3 +243,18 @@ def test_attack_modifier_negative_when_clearly_outgunned():
     # 10 > 20*0.8=16 → False
     modifier = _resource_modifier(ATTACK, city)
     assert modifier == -0.5, f"Expected -0.5, got {modifier}"
+
+
+def test_enemy_military_sums_all_rivals():
+    """_enemy_military must sum military across ALL non-self civs, not just the first."""
+    import types
+    from civ_sim.agents.decisions import _enemy_military
+
+    city = make_mock_city(civ_id=0, enemy_military=50)
+    # The mock sets up one rival civ with total_military=50.
+    # Inject a second rival civ to test multi-civ summation.
+    extra_civ = types.SimpleNamespace(civ_id=2, total_military=30)
+    city.model.civilizations.append(extra_civ)
+
+    result = _enemy_military(city)
+    assert result == 80, f"Expected 80 (50+30), got {result}"
