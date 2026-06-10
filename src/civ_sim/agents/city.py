@@ -156,12 +156,12 @@ class CityAgent(Grid2DMovingAgent):
                 if 0 <= nx < grid.width and 0 <= ny < grid.height:
                     if grid.ownership[nx, ny] == self.civ.civ_id:
                         raw_food  = grid.consume(nx, ny, ResourceType.FOOD,     3.0)
-                        raw_water = grid.consume(nx, ny, ResourceType.WATER,    1.0) * 0.5
+                        raw_water = grid.consume(nx, ny, ResourceType.WATER,    1.0)
                         raw_wood  = grid.consume(nx, ny, ResourceType.WOOD,     1.0)
                         raw_mins  = grid.consume(nx, ny, ResourceType.MINERALS, 0.5)
                         # Track raw work (tile extraction), apply bonus to output
                         work_done += raw_food + raw_water + raw_wood + raw_mins
-                        self.food_stock    += (raw_food + raw_water) * bonus
+                        self.food_stock    += (raw_food + raw_water * 0.5) * bonus
                         self.wood_stock    += raw_wood * bonus
                         self.mineral_stock += raw_mins * bonus
 

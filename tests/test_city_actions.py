@@ -313,6 +313,8 @@ def test_gather_output_scales_with_population(mini_model):
             if 0 <= nx < mini_model.grid.width and 0 <= ny < mini_model.grid.height:
                 mini_model.grid.layers[ResourceType.FOOD].data[nx, ny] = 80.0
                 mini_model.grid.layers[ResourceType.WOOD].data[nx, ny] = 80.0
+                mini_model.grid.layers[ResourceType.WATER].data[nx, ny] = 80.0
+                mini_model.grid.layers[ResourceType.MINERALS].data[nx, ny] = 80.0
 
     # Large pop
     city.population = 500
