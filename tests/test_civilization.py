@@ -1,6 +1,6 @@
 import random
 import pytest
-from agents.civilization import CulturalTraits, Civilization
+from civ_sim.agents.civilization import CulturalTraits, Civilization
 from unittest.mock import MagicMock
 
 

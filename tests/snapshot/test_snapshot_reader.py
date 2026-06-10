@@ -1,8 +1,8 @@
 import tempfile, os
 import numpy as np
 import duckdb
-from storage.snapshot import SnapshotWriter, SnapshotReader, ReplayFrame
-from world.resources import ResourceType
+from civ_sim.storage.snapshot import SnapshotWriter, SnapshotReader, ReplayFrame
+from civ_sim.world.resources import ResourceType
 from unittest.mock import MagicMock
 
 
@@ -127,7 +127,7 @@ def test_reader_load_city_civ_round_trip():
         grid.layers = {ResourceType.FOOD: food_layer}
         grid.config.resource_max = 100.0
 
-        from agents.city import CityAgent
+        from civ_sim.agents.city import CityAgent
         city = MagicMock(spec=CityAgent)
         city.unique_id = "u1"
         civ_mock = MagicMock()

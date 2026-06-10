@@ -1,4 +1,4 @@
-from visualization.terminal_renderer import _tile_char, _city_char
+from civ_sim.visualization.terminal_renderer import _tile_char, _city_char
 
 
 def test_tile_char_empty():
@@ -74,9 +74,9 @@ def test_terminal_renderer_update_no_crash():
     import sys
     from unittest.mock import patch
 
-    from config import SimConfig
-    from simulation.model import CivModel
-    from visualization.terminal_renderer import TerminalRenderer
+    from civ_sim.config import SimConfig
+    from civ_sim.simulation.model import CivModel
+    from civ_sim.visualization.terminal_renderer import TerminalRenderer
 
     cfg = SimConfig(width=20, height=15, cities_per_civ=1, max_ticks=2, visualize=False)
     model = CivModel(cfg)

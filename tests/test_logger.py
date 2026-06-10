@@ -2,7 +2,7 @@
 import json
 import pytest
 import duckdb
-from storage.logger import EventLogger
+from civ_sim.storage.logger import EventLogger
 
 
 @pytest.fixture
@@ -13,7 +13,7 @@ def mem_logger():
 
 
 def test_log_directive_inserts_row(mem_logger):
-    from agents.providers.council_provider import StrategicDirective
+    from civ_sim.agents.providers.council_provider import StrategicDirective
     d = StrategicDirective(
         era_goal="Expand east",
         action_weights={"gather": 0.0, "trade": 0.0, "expand": 0.8, "fortify": 0.0, "attack": 0.0, "research": 0.0},
@@ -36,7 +36,7 @@ def test_log_directive_inserts_row(mem_logger):
 
 
 def test_log_directive_emergency_flag(mem_logger):
-    from agents.providers.council_provider import StrategicDirective
+    from civ_sim.agents.providers.council_provider import StrategicDirective
     d = StrategicDirective(
         era_goal="Defend now",
         action_weights={"gather": 0.0, "trade": 0.0, "expand": 0.0, "fortify": 0.8, "attack": 0.0, "research": 0.0},

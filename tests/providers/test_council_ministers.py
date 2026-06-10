@@ -20,8 +20,8 @@ def make_async_client(content: str):
 
 @pytest.mark.asyncio
 async def test_call_sector_minister_returns_structured_output():
-    from agents.providers.council_ministers import call_sector_minister
-    from agents.providers.council_prompts import MINISTER_SPECS
+    from civ_sim.agents.providers.council_ministers import call_sector_minister
+    from civ_sim.agents.providers.council_prompts import MINISTER_SPECS
 
     content = json.dumps({
         "analysis": "Enemy is weak",
@@ -44,8 +44,8 @@ async def test_call_sector_minister_returns_structured_output():
 
 @pytest.mark.asyncio
 async def test_call_sector_minister_fallback_on_bad_json():
-    from agents.providers.council_ministers import call_sector_minister
-    from agents.providers.council_prompts import MINISTER_SPECS
+    from civ_sim.agents.providers.council_ministers import call_sector_minister
+    from civ_sim.agents.providers.council_prompts import MINISTER_SPECS
 
     traits = MagicMock()
     traits.aggressiveness = 0.5
@@ -62,8 +62,8 @@ async def test_call_sector_minister_fallback_on_bad_json():
 
 @pytest.mark.asyncio
 async def test_call_sector_minister_fallback_on_timeout():
-    from agents.providers.council_ministers import call_sector_minister
-    from agents.providers.council_prompts import MINISTER_SPECS
+    from civ_sim.agents.providers.council_ministers import call_sector_minister
+    from civ_sim.agents.providers.council_prompts import MINISTER_SPECS
     import asyncio
 
     traits = MagicMock()
@@ -80,7 +80,7 @@ async def test_call_sector_minister_fallback_on_timeout():
 
 @pytest.mark.asyncio
 async def test_call_budget_minister_returns_structured_output():
-    from agents.providers.council_ministers import call_budget_minister
+    from civ_sim.agents.providers.council_ministers import call_budget_minister
 
     content = json.dumps({
         "veto": False,
@@ -99,8 +99,8 @@ async def test_call_budget_minister_returns_structured_output():
 
 @pytest.mark.asyncio
 async def test_call_chief_returns_parsed_directive():
-    from agents.providers.council_ministers import call_chief
-    from agents.decisions import ALL_ACTIONS
+    from civ_sim.agents.providers.council_ministers import call_chief
+    from civ_sim.agents.decisions import ALL_ACTIONS
 
     content = json.dumps({
         "era_goal": "Dominate the east",
@@ -123,8 +123,8 @@ async def test_call_chief_returns_parsed_directive():
 
 @pytest.mark.asyncio
 async def test_call_chief_clamps_weights():
-    from agents.providers.council_ministers import call_chief
-    from agents.decisions import ALL_ACTIONS
+    from civ_sim.agents.providers.council_ministers import call_chief
+    from civ_sim.agents.decisions import ALL_ACTIONS
 
     content = json.dumps({
         "era_goal": "Test",
@@ -145,7 +145,7 @@ async def test_call_chief_clamps_weights():
 
 @pytest.mark.asyncio
 async def test_call_chief_returns_none_on_bad_json():
-    from agents.providers.council_ministers import call_chief
+    from civ_sim.agents.providers.council_ministers import call_chief
 
     traits = MagicMock()
     traits.risk_tolerance = 0.5

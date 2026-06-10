@@ -1,6 +1,6 @@
 import sys
 from unittest.mock import patch
-from config import SimConfig
+from civ_sim.config import SimConfig
 
 
 def test_snapshot_interval_default():

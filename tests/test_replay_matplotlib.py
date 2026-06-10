@@ -2,8 +2,8 @@ import tempfile, os
 import sys
 import numpy as np
 from unittest.mock import patch, MagicMock, ANY
-from storage.snapshot import SnapshotWriter, SnapshotReader
-from world.resources import ResourceType
+from civ_sim.storage.snapshot import SnapshotWriter, SnapshotReader
+from civ_sim.world.resources import ResourceType
 
 
 def _write_one_snapshot(db_path):

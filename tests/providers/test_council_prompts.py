@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import MagicMock
 from tests.conftest import make_mock_city
-from agents.providers.council_prompts import (
+from civ_sim.agents.providers.council_prompts import (
     MINISTER_SPECS,
     build_sector_persona,
     build_chief_persona,

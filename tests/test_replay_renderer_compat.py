@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import numpy as np
 
-from storage.snapshot import CivState, CityState, _LayerProxy, GridState, ReplayFrame
-from world.resources import ResourceType
+from civ_sim.storage.snapshot import CivState, CityState, _LayerProxy, GridState, ReplayFrame
+from civ_sim.world.resources import ResourceType
 
 
 def _make_frame(n_civs=2, n_cities=1):
@@ -44,7 +44,7 @@ def _make_frame(n_civs=2, n_cities=1):
 
 def test_terminal_renderer_update_accepts_replay_frame():
     """TerminalRenderer.update() must not crash when given a ReplayFrame."""
-    from visualization.terminal_renderer import TerminalRenderer
+    from civ_sim.visualization.terminal_renderer import TerminalRenderer
 
     frame = _make_frame()
     with patch("sys.stdout", io.StringIO()):
@@ -54,7 +54,7 @@ def test_terminal_renderer_update_accepts_replay_frame():
 
 def test_terminal_renderer_city_state_visible_in_output():
     """City markers appear when agents are CityState objects (hasattr check)."""
-    from visualization.terminal_renderer import TerminalRenderer
+    from civ_sim.visualization.terminal_renderer import TerminalRenderer
 
     frame = _make_frame(n_civs=2, n_cities=1)
     buf = io.StringIO()
@@ -68,7 +68,7 @@ def test_terminal_renderer_city_state_visible_in_output():
 
 def test_terminal_renderer_territory_count_works_on_grid_state():
     """territory_count() on GridState doesn't crash inside update()."""
-    from visualization.terminal_renderer import TerminalRenderer
+    from civ_sim.visualization.terminal_renderer import TerminalRenderer
 
     frame = _make_frame()
     # Mark some tiles as owned by civ 0

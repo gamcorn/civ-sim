@@ -1,7 +1,7 @@
 import tempfile, os
 import duckdb
-from config import SimConfig
-from simulation.model import CivModel
+from civ_sim.config import SimConfig
+from civ_sim.simulation.model import CivModel
 
 
 def test_snapshot_written_every_n_ticks():

@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import pytest
-from agents.city import CityAgent
-from agents.decisions import ALL_ACTIONS
-from world.resources import ResourceType
+from civ_sim.agents.city import CityAgent
+from civ_sim.agents.decisions import ALL_ACTIONS
+from civ_sim.world.resources import ResourceType
 
 
 # ---------------------------------------------------------------------------

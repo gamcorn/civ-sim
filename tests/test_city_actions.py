@@ -8,8 +8,8 @@ from __future__ import annotations
 import pytest
 from unittest.mock import patch, MagicMock
 
-from agents.city import CityAgent
-from world.resources import ResourceType
+from civ_sim.agents.city import CityAgent
+from civ_sim.world.resources import ResourceType
 
 
 # ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 import numpy as np
 from types import SimpleNamespace
-from world.resources import ResourceType
-from storage.snapshot import (
+from civ_sim.world.resources import ResourceType
+from civ_sim.storage.snapshot import (
     CivState, CityState, _LayerProxy, GridState, ReplayFrame,
 )
 

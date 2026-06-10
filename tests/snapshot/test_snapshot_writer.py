@@ -2,8 +2,8 @@ import tempfile, os
 import numpy as np
 import duckdb
 from unittest.mock import MagicMock
-from world.resources import ResourceType
-from storage.snapshot import SnapshotWriter
+from civ_sim.world.resources import ResourceType
+from civ_sim.storage.snapshot import SnapshotWriter
 
 
 def _make_mock_grid(width=8, height=6):
@@ -20,7 +20,7 @@ def _make_mock_grid(width=8, height=6):
 
 
 def _make_mock_city(civ_id=0, x=2, y=3):
-    from agents.city import CityAgent
+    from civ_sim.agents.city import CityAgent
     city = MagicMock(spec=CityAgent)
     city.unique_id = f"city-{civ_id}-{x}-{y}"
     civ = MagicMock()

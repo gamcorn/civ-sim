@@ -11,16 +11,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import openai
 
-from agents.providers.council_prompts import (
+from civ_sim.agents.providers.council_prompts import (
     MINISTER_SPECS, SECTOR_SCHEMA, SECTOR_SCHEMA_DICT,
     BUDGET_SCHEMA, BUDGET_SCHEMA_DICT, CHIEF_SCHEMA, CHIEF_SCHEMA_DICT,
     build_civ_state_snapshot, build_sector_persona, build_budget_persona, build_chief_persona,
     build_sector_user_message, build_budget_user_message, build_chief_user_message,
 )
-from agents.providers.council_ministers import (
+from civ_sim.agents.providers.council_ministers import (
     _parse_json_safe, call_sector_minister, call_budget_minister, call_chief,
 )
-from agents.civilization import CulturalTraits
+from civ_sim.agents.civilization import CulturalTraits
 
 BASE_URL = "http://localhost:8000/v1"
 MODEL = "model"

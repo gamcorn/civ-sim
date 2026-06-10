@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from agents.decisions import (
+from civ_sim.agents.decisions import (
     ALL_ACTIONS,
     ATTACK,
     EXPAND,

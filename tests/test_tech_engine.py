@@ -1,8 +1,8 @@
 """Tests for TechEngine — check(), _discover(), _requirements_met()."""
 import pytest
-from agents.city import CityAgent
-from technology.discovery import TechEngine, TECH_TREE
-from world.resources import ResourceType
+from civ_sim.agents.city import CityAgent
+from civ_sim.technology.discovery import TechEngine, TECH_TREE
+from civ_sim.world.resources import ResourceType
 
 
 def _get_city(mini_model):

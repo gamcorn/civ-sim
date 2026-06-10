@@ -13,8 +13,8 @@ def _make_completion(content: str):
 
 
 def test_returns_llm_action_when_valid():
-    from config import ProviderConfig
-    from agents.providers.openai_compat import OpenAICompatibleProvider
+    from civ_sim.config import ProviderConfig
+    from civ_sim.agents.providers.openai_compat import OpenAICompatibleProvider
 
     cfg = ProviderConfig(type="openai_compatible", model="test-model")
     provider = OpenAICompatibleProvider(cfg)
@@ -30,8 +30,8 @@ def test_returns_llm_action_when_valid():
 
 def test_falls_back_on_timeout():
     import asyncio as _asyncio
-    from config import ProviderConfig
-    from agents.providers.openai_compat import OpenAICompatibleProvider
+    from civ_sim.config import ProviderConfig
+    from civ_sim.agents.providers.openai_compat import OpenAICompatibleProvider
 
     cfg = ProviderConfig(type="openai_compatible", model="test-model", timeout=0.001)
     provider = OpenAICompatibleProvider(cfg)
@@ -45,13 +45,13 @@ def test_falls_back_on_timeout():
         results = asyncio.run(provider.choose_actions_batch([city]))
 
     # Must return a valid action (rule-based fallback), not raise
-    from agents.decisions import ALL_ACTIONS
+    from civ_sim.agents.decisions import ALL_ACTIONS
     assert results[0] in ALL_ACTIONS
 
 
 def test_falls_back_on_hallucinated_response():
-    from config import ProviderConfig
-    from agents.providers.openai_compat import OpenAICompatibleProvider
+    from civ_sim.config import ProviderConfig
+    from civ_sim.agents.providers.openai_compat import OpenAICompatibleProvider
 
     cfg = ProviderConfig(type="openai_compatible", model="test-model")
     provider = OpenAICompatibleProvider(cfg)
@@ -62,13 +62,13 @@ def test_falls_back_on_hallucinated_response():
     with patch.object(provider._client.chat.completions, "create", mock_create):
         results = asyncio.run(provider.choose_actions_batch([city]))
 
-    from agents.decisions import ALL_ACTIONS
+    from civ_sim.agents.decisions import ALL_ACTIONS
     assert results[0] in ALL_ACTIONS
 
 
 def test_falls_back_on_api_exception():
-    from config import ProviderConfig
-    from agents.providers.openai_compat import OpenAICompatibleProvider
+    from civ_sim.config import ProviderConfig
+    from civ_sim.agents.providers.openai_compat import OpenAICompatibleProvider
 
     cfg = ProviderConfig(type="openai_compatible", model="test-model")
     provider = OpenAICompatibleProvider(cfg)
@@ -79,13 +79,13 @@ def test_falls_back_on_api_exception():
     with patch.object(provider._client.chat.completions, "create", mock_create):
         results = asyncio.run(provider.choose_actions_batch([city]))
 
-    from agents.decisions import ALL_ACTIONS
+    from civ_sim.agents.decisions import ALL_ACTIONS
     assert results[0] in ALL_ACTIONS
 
 
 def test_batch_of_three_cities():
-    from config import ProviderConfig
-    from agents.providers.openai_compat import OpenAICompatibleProvider
+    from civ_sim.config import ProviderConfig
+    from civ_sim.agents.providers.openai_compat import OpenAICompatibleProvider
 
     cfg = ProviderConfig(type="openai_compatible", model="test-model")
     provider = OpenAICompatibleProvider(cfg)

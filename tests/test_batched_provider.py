@@ -1,8 +1,8 @@
 import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from config import ProviderConfig
-from agents.providers.openai_compat import OpenAICompatibleProvider
+from civ_sim.config import ProviderConfig
+from civ_sim.agents.providers.openai_compat import OpenAICompatibleProvider
 from tests.conftest import make_mock_city
 
 

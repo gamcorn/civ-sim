@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import pytest
-from config import SimConfig
-from simulation.model import CivModel
-from agents.city import CityAgent
+from civ_sim.config import SimConfig
+from civ_sim.simulation.model import CivModel
+from civ_sim.agents.city import CityAgent
 
 
 # ---------------------------------------------------------------------------

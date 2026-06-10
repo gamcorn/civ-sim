@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import MagicMock
 import numpy as np
-from config import SimConfig
-from simulation.model import CivModel
+from civ_sim.config import SimConfig
+from civ_sim.simulation.model import CivModel
 
 
 def make_mock_city(
@@ -63,7 +63,7 @@ def make_mock_city(
     grid.ownership = ownership
 
     def _get(x, y, rt):
-        from world.resources import ResourceType
+        from civ_sim.world.resources import ResourceType
         if rt == ResourceType.WOOD:
             return wood
         if rt == ResourceType.MINERALS:

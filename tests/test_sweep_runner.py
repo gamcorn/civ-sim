@@ -3,7 +3,7 @@ import os
 import tempfile
 import pytest
 from unittest.mock import patch, MagicMock
-from config import SimConfig
+from civ_sim.config import SimConfig
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def _fake_result(seed):
 
 
 def test_run_single_returns_summary_keys(base_cfg):
-    from simulation.runner import run_single
+    from civ_sim.simulation.runner import run_single
     result = run_single(base_cfg)
     assert set(result.keys()) >= {"seed", "ticks", "winner", "traits_0", "traits_1",
                                    "techs_0", "techs_1"}
@@ -36,7 +36,7 @@ def test_run_single_returns_summary_keys(base_cfg):
 
 def test_run_single_uses_memory_db_by_default(base_cfg):
     base_cfg.db_path = ":memory:"
-    from simulation.runner import run_single
+    from civ_sim.simulation.runner import run_single
     result = run_single(base_cfg)
     assert result is not None
 
@@ -62,7 +62,7 @@ def test_run_sweep_writes_to_output_db(base_cfg):
             mock_ray.get = MagicMock(side_effect=lambda ref: _fake_result(int(ref[-1])))
             mock_ray.shutdown = MagicMock()
 
-            from simulation.runner import run_sweep
+            from civ_sim.simulation.runner import run_sweep
             run_sweep(n_runs=n, base_config=base_cfg, output_db=out_db, num_workers=0)
 
         import duckdb
@@ -75,7 +75,7 @@ def test_run_sweep_writes_to_output_db(base_cfg):
 
 
 def test_sweep_worker_uses_memory_db(base_cfg):
-    from simulation.runner import _sweep_worker
+    from civ_sim.simulation.runner import _sweep_worker
     result = _sweep_worker(seed=7, base_config=base_cfg)
     assert result["seed"] == 7
     assert not os.path.exists("/tmp/civ_sweep_7.duckdb")

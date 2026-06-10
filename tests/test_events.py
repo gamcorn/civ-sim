@@ -1,9 +1,9 @@
 import random
 import pytest
-from config import SimConfig
-from world.events import EventSampler
-from world.grid import ResourceGrid
-from world.resources import ResourceType
+from civ_sim.config import SimConfig
+from civ_sim.world.events import EventSampler
+from civ_sim.world.grid import ResourceGrid
+from civ_sim.world.resources import ResourceType
 
 
 @pytest.fixture
