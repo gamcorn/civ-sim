@@ -209,3 +209,24 @@ def test_do_research_calls_tech_engine(mini_model):
         city._do_research()
 
     mock_check.assert_called_once_with(city)
+
+
+def test_attacker_loses_troops_on_successful_attack(mini_model):
+    """The attacker must take casualties even when it wins."""
+    from civ_sim.agents.city import CityAgent
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    assert len(cities) >= 2, "Need 2 cities for combat test"
+    attacker = cities[0]
+    defender = cities[1]
+    # Overwhelming force guarantees a win
+    attacker.military = 200
+    defender.military = 1
+    attacker.mineral_stock = 50.0
+
+    mil_before = attacker.military
+    mini_model.random.seed(0)
+    attacker._do_attack()
+
+    assert attacker.military < mil_before, (
+        f"Winning attacker should lose some troops; had {mil_before}, now has {attacker.military}"
+    )

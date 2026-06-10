@@ -223,6 +223,9 @@ class CityAgent(Grid2DMovingAgent):
         win_prob = my_str / (my_str + enemy_str + 1e-6)
 
         if self.model.random.random() < win_prob:
+            # Attacker takes proportional losses from enemy resistance (Lanchester)
+            attacker_loss = max(1, int(self.military * (enemy_str / (my_str + enemy_str + 1e-6)) * 0.3))
+            self.military = max(0, self.military - attacker_loss)
             target.military = max(0, target.military - int(self.military * 0.3))
             target.population = max(0, target.population - int(target.population * 0.2))
 
