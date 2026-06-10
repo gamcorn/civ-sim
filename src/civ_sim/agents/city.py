@@ -380,7 +380,11 @@ class CityAgent(Grid2DMovingAgent):
         mineral_spent = min(self.mineral_stock, cfg.recruit_mineral_cost)
         self.population -= pop_drafted
         self.mineral_stock = max(0.0, self.mineral_stock - mineral_spent)
-        self.military += int(pop_drafted * cfg.recruit_military_ratio)
+        military_f = pop_drafted * cfg.recruit_military_ratio
+        military_gained = int(military_f)
+        if self.model.random.random() < (military_f - military_gained):
+            military_gained += 1
+        self.military += military_gained
 
     def _collapse(self) -> None:
         self.model.grid.ownership[self.x, self.y] = -1  # release home tile only
