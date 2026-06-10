@@ -23,6 +23,21 @@ TECH_TREE: dict[str, dict] = {
     "industrialism": {"tech:steam_power": True, ResourceType.MINERALS: 90.0},
 }
 
+# Science-point cost per technology (accumulated via _do_research)
+TECH_COSTS: dict[str, float] = {
+    "agriculture":    50.0,
+    "masonry":        40.0,
+    "metallurgy":     60.0,
+    "sailing":        80.0,
+    "irrigation":     80.0,
+    "bronze_tools":  100.0,
+    "writing":       120.0,
+    "iron_working":  150.0,
+    "mathematics":   180.0,
+    "steam_power":   250.0,
+    "industrialism": 400.0,
+}
+
 # Multipliers applied to a city when a tech is first discovered
 TECH_EFFECTS: dict[str, dict[str, float]] = {
     "agriculture":   {"food_regen": 0.1},
@@ -38,7 +53,7 @@ TECH_EFFECTS: dict[str, dict[str, float]] = {
 
 class TechEngine:
     def check(self, city: "CityAgent") -> None:
-        """Check if the city's civilization can discover any new technologies."""
+        """Check if the city's civilization can discover any new tech (at most one per call)."""
         civ = city.civ
         grid = city.model.grid
 
@@ -47,8 +62,14 @@ class TechEngine:
                 continue
             if self._requirements_met(tech, reqs, city, civ, grid):
                 self._discover(tech, city)
+                return   # at most one discovery per research action
 
     def _requirements_met(self, tech, reqs, city, civ, grid) -> bool:
+        # Check science-point cost
+        point_cost = TECH_COSTS.get(tech, 100.0)
+        if civ.science_points < point_cost:
+            return False
+        # Check prerequisites (tech and tile-resource thresholds)
         for req, threshold in reqs.items():
             if isinstance(req, str) and req.startswith("tech:"):
                 needed = req[5:]
@@ -63,10 +84,11 @@ class TechEngine:
         civ = city.civ
         civ.discovered_techs.add(tech)
         civ.tech_level = len(civ.discovered_techs)
+        civ.science_points -= TECH_COSTS.get(tech, 100.0)  # consume points
 
         effects = TECH_EFFECTS.get(tech, {})
         if "food_regen" in effects:
-            civ.harvest_bonus += effects["food_regen"]   # per-civ, not global config
+            civ.harvest_bonus += effects["food_regen"]   # per-civ (from Task 2)
 
         city.model.logger.log_event(
             tick=city.model.steps,

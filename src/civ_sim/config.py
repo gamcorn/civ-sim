@@ -85,8 +85,10 @@ class SimConfig:
     capture_reconstruct_mineral: float = 10.0
     # Harvest
     harvest_radius: int = 5          # tiles from city that gather action reaches
+    # Science-point accrual per unit of resource spent in research
+    science_per_wood: float = 1.0
+    science_per_mineral: float = 1.5
     # Technology multipliers on production/military
-    tech_food_bonus: float = 0.1    # +20% food per tech discovered
     tech_military_bonus: float = 0.3
     # Environmental events (probability per tick)
     drought_prob: float = 0.04

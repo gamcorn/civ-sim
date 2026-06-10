@@ -339,10 +339,17 @@ class CityAgent(Grid2DMovingAgent):
         )
 
     def _do_research(self) -> None:
-        from civ_sim.technology.discovery import TechEngine
         cfg = self.model.config
-        self.wood_stock    = max(0.0, self.wood_stock    - cfg.research_wood_cost)
-        self.mineral_stock = max(0.0, self.mineral_stock - cfg.research_mineral_cost)
+        wood_spent = min(self.wood_stock, cfg.research_wood_cost)
+        mineral_spent = min(self.mineral_stock, cfg.research_mineral_cost)
+        self.wood_stock = max(0.0, self.wood_stock - wood_spent)
+        self.mineral_stock = max(0.0, self.mineral_stock - mineral_spent)
+
+        # Accumulate science points, scaled by innovation trait
+        innovation = self.civ.traits.innovation
+        points = (wood_spent * cfg.science_per_wood + mineral_spent * cfg.science_per_mineral) * (0.5 + innovation)
+        self.civ.science_points += points
+
         self.model.tech_engine.check(self)
 
     def _collapse(self) -> None:
