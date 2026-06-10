@@ -175,3 +175,41 @@ def test_collapse_releases_territory(mini_model):
 
     # Home tile is released; surrounding tiles claimed before collapse remain
     assert mini_model.grid.ownership[city.x, city.y] == -1
+
+
+def test_population_grows_with_high_food_stock_even_on_drained_tile(mini_model):
+    """A city with large food_stock should grow even when its tile is depleted."""
+    from civ_sim.agents.city import CityAgent
+    from civ_sim.world.resources import ResourceType
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    city = cities[0]
+
+    mini_model.grid.layers[ResourceType.FOOD].data[city.x, city.y] = 0.0
+    city.food_stock = 500.0
+    city.population = 50
+
+    pop_before = city.population
+    # growth_f ≈ 0.6 < 1, so stochastic rounding may not fire in a single call;
+    # call up to 20 times — (0.4)^20 ≈ 1e-9 probability of no growth after 20 tries.
+    for _ in range(20):
+        city._grow_population()
+        if city.population > pop_before:
+            break
+    assert city.population > pop_before, (
+        f"City with large stockpile should grow even on empty tile; pop stayed at {pop_before}"
+    )
+
+
+def test_population_does_not_grow_with_empty_stockpile_and_empty_tile(mini_model):
+    """A city with empty stock and empty tile should not grow."""
+    from civ_sim.agents.city import CityAgent
+    from civ_sim.world.resources import ResourceType
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    city = cities[0]
+
+    mini_model.grid.layers[ResourceType.FOOD].data[city.x, city.y] = 0.0
+    city.food_stock = 0.0
+    city.population = 50
+
+    city._grow_population()
+    assert city.population == 50, "Starving city with empty tile must not grow"

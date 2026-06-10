@@ -38,7 +38,7 @@ class SimConfig:
     max_ticks: int = 500
     rng_seed: int = 42
     # Resource regeneration per tick (fraction of max)
-    food_regen: float = 0.02
+    food_regen: float = 0.04
     water_regen: float = 0.015
     wood_regen: float = 0.01
     mineral_regen: float = 0.005  # slow renewal keeps research viable
@@ -47,7 +47,7 @@ class SimConfig:
     initial_pop: int = 50
     pop_cap: int = 1000             # hard ceiling per city
     pop_growth_rate_max: float = 0.012  # max growth rate (small civ, abundant food)
-    pop_demographic_cap: int = 300000000     # civ total pop at which growth → 10% of max
+    pop_demographic_cap: int = 10000   # civ total pop at which growth → 10% of max; realistic for game scale
     pop_starvation_rate: float = 0.04
     food_per_person: float = 0.05    # food consumed per person per tick
     capture_threshold: float = 0.3   # city captured when pop < initial_pop × this
