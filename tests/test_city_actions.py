@@ -230,3 +230,51 @@ def test_attacker_loses_troops_on_successful_attack(mini_model):
     assert attacker.military < mil_before, (
         f"Winning attacker should lose some troops; had {mil_before}, now has {attacker.military}"
     )
+
+
+def test_trade_transfers_stockpiles_not_tile_resources(mini_model):
+    """Trade must move food_stock to receiver and get mineral_stock back."""
+    from civ_sim.agents.city import CityAgent
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    assert len(cities) >= 2
+    sender = cities[0]
+    receiver = cities[1]
+
+    # Sender has food surplus; receiver has mineral surplus
+    daily_need = sender.population * mini_model.config.food_per_person
+    sender.food_stock = daily_need * 30   # large surplus (well above 10-tick buffer)
+    sender.mineral_stock = 0.0
+
+    receiver.food_stock = 0.0
+    receiver.mineral_stock = 200.0
+
+    sender_food_before = sender.food_stock
+    receiver_food_before = receiver.food_stock
+    sender_mineral_before = sender.mineral_stock
+    receiver_mineral_before = receiver.mineral_stock
+
+    sender._do_trade()
+
+    assert sender.food_stock < sender_food_before, "Sender should have sent food from stockpile"
+    assert receiver.food_stock > receiver_food_before, "Receiver should have received food in stockpile"
+    assert sender.mineral_stock > sender_mineral_before, "Sender should have received minerals"
+    assert receiver.mineral_stock < receiver_mineral_before, "Receiver should have paid minerals"
+
+
+def test_trade_aborts_when_receiver_has_no_mineral_surplus(mini_model):
+    """Trade should not execute if the receiver cannot pay minerals."""
+    from civ_sim.agents.city import CityAgent
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    sender = cities[0]
+    receiver = cities[1]
+
+    daily_need = sender.population * mini_model.config.food_per_person
+    sender.food_stock = daily_need * 30   # sender has surplus
+    receiver.mineral_stock = 0.0          # receiver is broke
+
+    sender_food_before = sender.food_stock
+    sender._do_trade()
+
+    assert sender.food_stock == sender_food_before, (
+        "Trade should abort when receiver has no mineral surplus"
+    )
