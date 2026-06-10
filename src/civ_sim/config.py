@@ -78,7 +78,6 @@ class SimConfig:
     research_mineral_cost: float = 5.0
     attack_mineral_cost: float = 3.0
     # War economy
-    max_defense_military: float = 100.0
     fortify_defense_bonus: float = 0.8
     max_fortification: float = 100.0      # cap for city.fortification
     fortification_decay: float = 0.005    # per-tick fractional decay of fortification
