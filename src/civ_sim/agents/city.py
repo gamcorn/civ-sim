@@ -175,21 +175,22 @@ class CityAgent(Grid2DMovingAgent):
         """Offer food surplus to nearest city; it pays minerals if it has surplus."""
         cfg = self.model.config
 
-        # Find closest city (any civ — trade is cooperative)
-        best: "CityAgent | None" = None
-        best_dist = 999
+        # Find closest willing city (any civ — trade is cooperative, gated by relations)
+        trade_range = 30 + self.civ.trade_range_bonus
+        candidates = []
         for other in self.model.agents_by_type.get(type(self), []):
             if other is not self:
                 dist = abs(other.x - self.x) + abs(other.y - self.y)
-                if dist < best_dist:
-                    best_dist = dist
-                    best = other
-        trade_range = 30 + self.civ.trade_range_bonus
-        if best is None or best_dist > trade_range:
-            return
+                if dist <= trade_range:
+                    candidates.append((dist, other))
+        candidates.sort(key=lambda t: t[0])
 
-        rel = self.model.get_relation(self.civ.civ_id, best.civ.civ_id)
-        if rel < cfg.trade_relation_threshold:
+        best: "CityAgent | None" = None
+        for _, other in candidates:
+            if self.model.get_relation(self.civ.civ_id, other.civ.civ_id) >= cfg.trade_relation_threshold:
+                best = other
+                break
+        if best is None:
             return
 
         # Sender: offer up to 20% of food surplus over a 10-tick buffer
