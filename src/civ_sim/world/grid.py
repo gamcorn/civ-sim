@@ -66,9 +66,9 @@ class ResourceGrid:
         raw = opensimplex.noise2array(xs, ys).T
         return ((raw + 1.0) / 2.0 * self.config.resource_max).astype(np.float32)
 
-    def step(self):
+    def step(self, food_regen_mult: float = 1.0):
         regen_map = {
-            ResourceType.FOOD:     self.config.food_regen,
+            ResourceType.FOOD:     self.config.food_regen * food_regen_mult,
             ResourceType.WATER:    self.config.water_regen,
             ResourceType.WOOD:     self.config.wood_regen,
             ResourceType.MINERALS: self.config.mineral_regen,

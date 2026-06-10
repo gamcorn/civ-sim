@@ -61,24 +61,6 @@ def test_do_expand_claims_an_unclaimed_tile(mini_model):
     )
 
 
-def test_do_expand_deducts_wood_stock(mini_model):
-    """_do_expand deducts expand_wood_cost from wood_stock when a tile is claimed."""
-    cities = _get_cities(mini_model)
-    city = cities[0]
-    cfg = mini_model.config
-
-    city.wood_stock = 50.0
-    wood_before = city.wood_stock
-    territory_before = mini_model.grid.territory_count(city.civ.civ_id)
-
-    city._do_expand()
-
-    assert mini_model.grid.territory_count(city.civ.civ_id) > territory_before, (
-        "expect unclaimed tiles on 20x20 grid"
-    )
-    assert city.wood_stock == pytest.approx(wood_before - cfg.expand_wood_cost)
-
-
 def test_do_expand_no_op_when_all_tiles_claimed(mini_model):
     """If every tile in radius 3 is already owned, territory count stays the same."""
     cities = _get_cities(mini_model)
@@ -101,58 +83,28 @@ def test_do_expand_no_op_when_all_tiles_claimed(mini_model):
     )
 
 
-def test_do_expand_no_deduction_when_no_tile(mini_model):
-    """_do_expand does not deduct wood_stock if no unclaimed tile is reachable."""
-    cities = _get_cities(mini_model)
-    city = cities[0]
-    grid = mini_model.grid
-
-    for dx in range(-3, 4):
-        for dy in range(-3, 4):
-            nx, ny = city.x + dx, city.y + dy
-            if 0 <= nx < grid.width and 0 <= ny < grid.height:
-                grid.claim(nx, ny, city.civ.civ_id)
-
-    city.wood_stock = 50.0
-    wood_before = city.wood_stock
-    city._do_expand()
-    assert city.wood_stock == wood_before
-
-
 # ---------------------------------------------------------------------------
 # _do_fortify
 # ---------------------------------------------------------------------------
 
 def test_do_fortify_increases_military(mini_model):
-    """Fortifying with stockpiled minerals and wood increases military."""
+    """Fortifying with minerals + wood on the city tile should increase military."""
     cities = _get_cities(mini_model)
     city = cities[0]
 
-    # Cities start with initial_wood_stock and initial_mineral_stock from config,
-    # both above the fortify cost thresholds.
+    # Ensure enough minerals and wood on the city tile
+    mini_model.grid.deposit(city.x, city.y, ResourceType.MINERALS, 50.0)
+    mini_model.grid.deposit(city.x, city.y, ResourceType.WOOD, 50.0)
+
     mil_before = city.military
     city._do_fortify()
     assert city.military >= mil_before, (
         f"military should not decrease after _do_fortify; was {mil_before}, now {city.military}"
     )
+    # Also verify it actually increased (we deposited plenty of resources)
     assert city.military > mil_before, (
-        f"military should increase when stockpiles are available; was {mil_before}, now {city.military}"
+        f"military should increase when minerals/wood are available; was {mil_before}, now {city.military}"
     )
-
-
-def test_do_fortify_proportional_with_low_stock(mini_model):
-    """Military gain equals int((consumed_m + consumed_w) / 2) with partial stocks."""
-    cities = _get_cities(mini_model)
-    city = cities[0]
-
-    city.mineral_stock = 4.0   # less than fortify_mineral_cost (8.0)
-    city.wood_stock = 2.0      # less than fortify_wood_cost (4.0)
-    mil_before = city.military
-
-    city._do_fortify()
-
-    expected_gain = int((4.0 + 2.0) / 2)  # 3
-    assert city.military == mil_before + expected_gain
 
 
 # ---------------------------------------------------------------------------
@@ -259,175 +211,70 @@ def test_do_research_calls_tech_engine(mini_model):
     mock_check.assert_called_once_with(city)
 
 
-def test_do_research_deducts_wood_and_mineral_stock(mini_model):
-    """_do_research deducts wood_stock and mineral_stock as research costs."""
-    cities = _get_cities(mini_model)
-    city = cities[0]
-    city.wood_stock = 50.0
-    city.mineral_stock = 50.0
-    wood_before = city.wood_stock
-    mineral_before = city.mineral_stock
-
-    with patch.object(mini_model.tech_engine, "check", MagicMock()):
-        city._do_research()
-
-    assert city.wood_stock < wood_before
-    assert city.mineral_stock < mineral_before
-
-
-# ---------------------------------------------------------------------------
-# _do_attack — stockpile interactions
-# ---------------------------------------------------------------------------
-
-def test_do_attack_deducts_mineral_stock(mini_model):
-    """Attack always deducts mineral_stock as ammo cost, even with no target in range."""
-    cities = _get_cities(mini_model)
+def test_attacker_loses_troops_on_successful_attack(mini_model):
+    """The attacker must take casualties even when it wins."""
+    from civ_sim.agents.city import CityAgent
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    assert len(cities) >= 2, "Need 2 cities for combat test"
     attacker = cities[0]
+    defender = cities[1]
+    # Overwhelming force guarantees a win
+    attacker.military = 200
+    defender.military = 1
     attacker.mineral_stock = 50.0
-    mineral_before = attacker.mineral_stock
+
+    mil_before = attacker.military
+    mini_model.random.seed(0)
     attacker._do_attack()
-    assert attacker.mineral_stock < mineral_before
+
+    assert attacker.military < mil_before, (
+        f"Winning attacker should lose some troops; had {mil_before}, now has {attacker.military}"
+    )
 
 
-def test_do_attack_on_win_raids_target_stocks(mini_model):
-    """On attacker victory, the defender's wood and mineral stocks are pillaged."""
-    cities = _get_cities(mini_model)
-    attacker = cities[0]
-    defender = next(c for c in cities if c.civ.civ_id != attacker.civ.civ_id)
+def test_trade_transfers_stockpiles_not_tile_resources(mini_model):
+    """Trade must move food_stock to receiver and get mineral_stock back."""
+    from civ_sim.agents.city import CityAgent
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    assert len(cities) >= 2
+    sender = cities[0]
+    receiver = cities[1]
 
-    defender.x = attacker.x + 5
-    defender.y = attacker.y
-    defender.cell = mini_model.grid.cell(defender.x, defender.y)
-    attacker.military = 1000
-    defender.military = 1
-    defender.wood_stock = 100.0
-    defender.mineral_stock = 80.0
+    # Sender has food surplus; receiver has mineral surplus
+    daily_need = sender.population * mini_model.config.food_per_person
+    sender.food_stock = daily_need * 30   # large surplus (well above 10-tick buffer)
+    sender.mineral_stock = 0.0
 
-    wood_before = defender.wood_stock
-    mineral_before = defender.mineral_stock
+    receiver.food_stock = 0.0
+    receiver.mineral_stock = 200.0
 
-    with patch.object(mini_model.random, "random", return_value=0.0):
-        attacker._do_attack()
+    sender_food_before = sender.food_stock
+    receiver_food_before = receiver.food_stock
+    sender_mineral_before = sender.mineral_stock
+    receiver_mineral_before = receiver.mineral_stock
 
-    assert defender.wood_stock < wood_before
-    assert defender.mineral_stock < mineral_before
+    sender._do_trade()
 
-
-def test_do_attack_win_fortified_city_less_pillage(mini_model):
-    """A defender with high military loses fewer stockpile resources than an undefended one."""
-    cities = _get_cities(mini_model)
-    attacker = cities[0]
-    defender = next(c for c in cities if c.civ.civ_id != attacker.civ.civ_id)
-
-    defender.x = attacker.x + 5
-    defender.y = attacker.y
-    defender.cell = mini_model.grid.cell(defender.x, defender.y)
-    attacker.military = 1000
-
-    # Undefended: low military → damage_factor ≈ 1.0 → high pillage
-    defender.military = 1
-    defender.wood_stock = 100.0
-    with patch.object(mini_model.random, "random", return_value=0.0):
-        attacker._do_attack()
-    wood_lost_undefended = 100.0 - defender.wood_stock
-
-    # Fortified: high military → damage_factor = 0.2 → low pillage
-    defender.military = 100  # max_defense_military default
-    defender.wood_stock = 100.0
-    with patch.object(mini_model.random, "random", return_value=0.0):
-        attacker._do_attack()
-    wood_lost_fortified = 100.0 - defender.wood_stock
-
-    assert wood_lost_fortified < wood_lost_undefended
+    assert sender.food_stock < sender_food_before, "Sender should have sent food from stockpile"
+    assert receiver.food_stock > receiver_food_before, "Receiver should have received food in stockpile"
+    assert sender.mineral_stock > sender_mineral_before, "Sender should have received minerals"
+    assert receiver.mineral_stock < receiver_mineral_before, "Receiver should have paid minerals"
 
 
-# ---------------------------------------------------------------------------
-# _capture_city — stock transfer and reconstruction costs
-# ---------------------------------------------------------------------------
+def test_trade_aborts_when_receiver_has_no_mineral_surplus(mini_model):
+    """Trade should not execute if the receiver cannot pay minerals."""
+    from civ_sim.agents.city import CityAgent
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    sender = cities[0]
+    receiver = cities[1]
 
-def test_capture_city_transfers_stocks_to_attacker(mini_model):
-    """_capture_city zeroes target's stocks and transfers them to the attacker."""
-    cities = _get_cities(mini_model)
-    attacker = cities[0]
-    defender = next(c for c in cities if c.civ.civ_id != attacker.civ.civ_id)
+    daily_need = sender.population * mini_model.config.food_per_person
+    sender.food_stock = daily_need * 30   # sender has surplus
+    receiver.mineral_stock = 0.0          # receiver is broke
 
-    defender.food_stock = 50.0
-    defender.wood_stock = 40.0
-    defender.mineral_stock = 30.0
-    attacker.food_stock = 0.0
-    attacker.wood_stock = 0.0
-    attacker.mineral_stock = 0.0
+    sender_food_before = sender.food_stock
+    sender._do_trade()
 
-    attacker._capture_city(defender, damage_factor=0.0)  # zero cost to reconstruct
-
-    assert defender.food_stock == 0.0
-    assert defender.wood_stock == 0.0
-    assert defender.mineral_stock == 0.0
-    assert attacker.food_stock == pytest.approx(50.0)
-    assert attacker.wood_stock == pytest.approx(40.0)
-    assert attacker.mineral_stock == pytest.approx(30.0)
-
-
-def test_capture_city_deducts_reconstruction_costs(mini_model):
-    """_capture_city deducts reconstruction wood and mineral from the attacker."""
-    cities = _get_cities(mini_model)
-    attacker = cities[0]
-    defender = next(c for c in cities if c.civ.civ_id != attacker.civ.civ_id)
-    cfg = mini_model.config
-
-    defender.food_stock = 0.0
-    defender.wood_stock = 0.0
-    defender.mineral_stock = 0.0
-    attacker.food_stock = 0.0
-    attacker.wood_stock = 100.0
-    attacker.mineral_stock = 100.0
-
-    attacker._capture_city(defender, damage_factor=1.0)
-
-    assert attacker.wood_stock == pytest.approx(100.0 - cfg.capture_reconstruct_wood)
-    assert attacker.mineral_stock == pytest.approx(100.0 - cfg.capture_reconstruct_mineral)
-
-
-def test_capture_city_reconstruction_cheaper_for_fortified(mini_model):
-    """Capturing with damage_factor=0.2 costs less reconstruction than damage_factor=1.0."""
-    cities = _get_cities(mini_model)
-    attacker = cities[0]
-    defender = next(c for c in cities if c.civ.civ_id != attacker.civ.civ_id)
-
-    defender.food_stock = 0.0
-    defender.wood_stock = 0.0
-    defender.mineral_stock = 0.0
-
-    attacker.wood_stock = 100.0
-    attacker.mineral_stock = 100.0
-    attacker._capture_city(defender, damage_factor=1.0)
-    wood_after_full = attacker.wood_stock
-
-    attacker.wood_stock = 100.0
-    attacker.mineral_stock = 100.0
-    attacker._capture_city(defender, damage_factor=0.2)
-    wood_after_fortified = attacker.wood_stock
-
-    assert wood_after_fortified > wood_after_full
-
-
-# ---------------------------------------------------------------------------
-# _do_gather — stockpile harvesting
-# ---------------------------------------------------------------------------
-
-def test_do_gather_increases_wood_and_mineral_stock(mini_model):
-    """_do_gather harvests wood and minerals from claimed tiles in radius."""
-    cities = _get_cities(mini_model)
-    city = cities[0]
-    grid = mini_model.grid
-
-    grid.deposit(city.x, city.y, ResourceType.WOOD, 50.0)
-    grid.deposit(city.x, city.y, ResourceType.MINERALS, 50.0)
-    grid.claim(city.x, city.y, city.civ.civ_id)
-
-    wood_before = city.wood_stock
-    mineral_before = city.mineral_stock
-    city._do_gather()
-
-    assert city.wood_stock > wood_before
-    assert city.mineral_stock > mineral_before
+    assert sender.food_stock == sender_food_before, (
+        "Trade should abort when receiver has no mineral surplus"
+    )

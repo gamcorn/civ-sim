@@ -52,6 +52,11 @@ class Civilization:
         self.discovered_techs: set[str] = set()
         self.alive: bool = True
 
+        self.science_points: float = 0.0   # accumulated research progress (used by Task 8)
+        self.harvest_bonus: float = 1.0    # food/resource yield multiplier from tech
+        self.military_tech_bonus: float = 0.0   # additive military strength bonus from tech
+        self.trade_range_bonus: int = 0          # extra tiles added to base trade range (30)
+
         # Council emergency tracking — updated by CouncilProvider after each directive
         self._pop_at_last_directive: int = 0
         self._techs_at_last_directive: int = 0

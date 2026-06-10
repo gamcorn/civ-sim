@@ -57,103 +57,94 @@ def _resource_modifier(action: str, agent: "CityAgent") -> float:
     min_ratio = minerals / max_r
 
     if action == GATHER:
-        wood_ratio = min(1.0, agent.wood_stock / 50.0)
-        min_ratio_s = min(1.0, agent.mineral_stock / 30.0)
-        food_urgency = max(0.0, 0.4 - stock_ratio) * 1.5
-        wood_urgency = max(0.0, 0.3 - wood_ratio) * 0.8
-        min_urgency  = max(0.0, 0.3 - min_ratio_s) * 0.6
-        return food_urgency + wood_urgency + min_urgency
+        # Urgency when food stock is low
+        return max(0.0, 0.4 - stock_ratio) * 1.5
     if action == TRADE:
         # Surplus to share when stock is high
         return (stock_ratio - 0.4) * 0.6
     if action == EXPAND:
-        cfg = agent.model.config
         pop_pressure = (agent.population - 80) / 100.0
+        # Moderate food scarcity (stock_ratio < 0.3) drives land-grab before warfare
         land_hunger = max(0.0, 0.3 - stock_ratio) * 1.5
-        wood_pen = 0.0 if agent.wood_stock >= cfg.expand_wood_cost else \
-            -0.4 * (1.0 - agent.wood_stock / cfg.expand_wood_cost)
-        return min(0.5, max(0.0, pop_pressure + land_hunger)) + wood_pen
+        return min(0.5, max(0.0, pop_pressure + land_hunger))
     if action == FORTIFY:
-        cfg = agent.model.config
+        # More appealing the more outgunned we are
         civ_mil = max(1, agent.civ.total_military)
         enemy_mil = _enemy_military(agent)
         ratio = enemy_mil / civ_mil
         if ratio > 1.0:
-            base = min(0.7, (ratio - 1.0) * 0.5)
-        elif agent.military < 15:
-            base = 0.3 * (1.0 - agent.military / 15.0)
-        else:
-            base = 0.0
-        pen = 0.0
-        if agent.mineral_stock < cfg.fortify_mineral_cost:
-            pen -= 0.3 * (1.0 - agent.mineral_stock / cfg.fortify_mineral_cost)
-        if agent.wood_stock < cfg.fortify_wood_cost:
-            pen -= 0.2 * (1.0 - agent.wood_stock / cfg.fortify_wood_cost)
-        return base + pen
+            return min(0.7, (ratio - 1.0) * 0.5)
+        # Baseline: cities want to maintain a minimum garrison
+        if agent.military < 15:
+            return 0.3 * (1.0 - agent.military / 15.0)
+        return 0.0
     if action == ATTACK:
-        cfg = agent.model.config
         civ_mil = agent.civ.total_military
         enemy_mil = _enemy_military(agent)
         military_mod = 0.5 if civ_mil > enemy_mil * 0.8 else -0.5
+        # Severe food scarcity (stock_ratio < 0.1) → desperation overrides caution
         desperation = max(0.0, 0.1 - stock_ratio) * 6.0
+        # Enemy tiles encroaching nearby → territorial defense imperative
         defense = _territorial_threat(agent) * 0.8
-        ammo_pen = 0.0 if agent.mineral_stock >= cfg.attack_mineral_cost else -0.4
-        return military_mod + desperation + defense + ammo_pen
+        return military_mod + desperation + defense
     if action == RESEARCH:
         from civ_sim.technology.discovery import TECH_TREE
         if len(agent.civ.discovered_techs) >= len(TECH_TREE):
             return -1.0  # nothing left to discover
-        cfg = agent.model.config
-        wood_ready = min(1.0, agent.wood_stock / (cfg.research_wood_cost * 2))
-        min_ready  = min(1.0, agent.mineral_stock / (cfg.research_mineral_cost * 2))
-        return (wood_ready + min_ready) * 0.3 - 0.1
+        return (wood / max_r + min_ratio) * 0.3 - 0.1
 
     return 0.0
 
 
 def _enemy_military(agent: "CityAgent") -> int:
-    for civ in agent.model.civilizations:
-        if civ.civ_id != agent.civ.civ_id:
-            return civ.total_military
-    return 0
+    return sum(
+        civ.total_military
+        for civ in agent.model.civilizations
+        if civ.civ_id != agent.civ.civ_id
+    )
 
 
 def _feasible(agent: "CityAgent", scores: dict[str, float]) -> dict[str, float]:
+    cfg = agent.model.config
     feasible = {GATHER: scores[GATHER]}  # always available
 
-    # Trade: needs at least one reachable enemy city
+    # Trade: needs at least one reachable city (any civ)
     if _has_trade_partner(agent):
         feasible[TRADE] = scores[TRADE]
 
-    cfg = agent.model.config
-
-    # Expand: needs unclaimed adjacent tile AND enough wood to build
-    if _has_unclaimed_neighbor(agent) and agent.wood_stock >= cfg.expand_wood_cost * 0.5:
+    # Expand: needs unclaimed adjacent tile AND wood to pay the cost
+    if _has_unclaimed_neighbor(agent) and agent.wood_stock >= cfg.expand_wood_cost:
         feasible[EXPAND] = scores[EXPAND]
 
-    # Fortify: always possible (partial fortify with whatever stocks are available)
+    # Fortify: always possible (scales with what's actually consumed)
     feasible[FORTIFY] = scores[FORTIFY]
 
-    # Territorial defenders can attack with less military than normal aggressors
+    # Attack: needs a target, minimum military, AND minerals to pay the cost
     mil_threshold = 2 if _territorial_threat(agent) > 0.1 else 5
-    if (_attack_target(agent) is not None
-            and agent.military >= mil_threshold
-            and agent.mineral_stock >= cfg.attack_mineral_cost):
+    if (
+        _attack_target(agent) is not None
+        and agent.military >= mil_threshold
+        and agent.mineral_stock >= cfg.attack_mineral_cost
+    ):
         feasible[ATTACK] = scores[ATTACK]
 
-    # Research: needs stockpiled wood and minerals
-    if (agent.wood_stock >= cfg.research_wood_cost
-            and agent.mineral_stock >= cfg.research_mineral_cost):
+    # Research: needs stockpile to cover the action cost
+    if (
+        agent.wood_stock >= cfg.research_wood_cost
+        and agent.mineral_stock >= cfg.research_mineral_cost
+    ):
         feasible[RESEARCH] = scores[RESEARCH]
 
     return feasible
 
 
 def _has_trade_partner(agent: "CityAgent") -> bool:
+    """True if any other city (any civ) is within trade range."""
+    trade_range = 30 + agent.civ.trade_range_bonus
     for other in agent.model.agents_by_type.get(type(agent), []):
-        if other.civ.civ_id != agent.civ.civ_id:
+        if other is not agent:
             dist = abs(other.x - agent.x) + abs(other.y - agent.y)
-            if dist <= 30:
+            if dist <= trade_range:
                 return True
     return False
 

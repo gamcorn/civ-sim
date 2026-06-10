@@ -38,7 +38,7 @@ class SimConfig:
     max_ticks: int = 500
     rng_seed: int = 42
     # Resource regeneration per tick (fraction of max)
-    food_regen: float = 0.02
+    food_regen: float = 0.04
     water_regen: float = 0.015
     wood_regen: float = 0.01
     mineral_regen: float = 0.005  # slow renewal keeps research viable
@@ -47,7 +47,7 @@ class SimConfig:
     initial_pop: int = 50
     pop_cap: int = 1000             # hard ceiling per city
     pop_growth_rate_max: float = 0.012  # max growth rate (small civ, abundant food)
-    pop_demographic_cap: int = 300000000     # civ total pop at which growth → 10% of max
+    pop_demographic_cap: int = 10000   # civ total pop at which growth → 10% of max; realistic for game scale
     pop_starvation_rate: float = 0.04
     food_per_person: float = 0.05    # food consumed per person per tick
     capture_threshold: float = 0.3   # city captured when pop < initial_pop × this
@@ -57,11 +57,37 @@ class SimConfig:
     # Military
     initial_military: int = 10
     military_upkeep: float = 0.08    # food per military unit per tick
+    # Stockpile initial values
+    initial_wood_stock: float = 20.0
+    initial_mineral_stock: float = 20.0
+    # Wood/mineral upkeep per tick
+    wood_per_person: float = 0.01
+    mineral_per_person: float = 0.005
+    mineral_per_military: float = 0.02
+    wood_per_military: float = 0.01
+    # Shortage penalties
+    wood_shortage_rate: float = 0.02
+    mineral_shortage_rate: float = 0.03
+    # Action costs (stockpile-based)
+    fortify_mineral_cost: float = 8.0
+    fortify_wood_cost: float = 4.0
+    expand_wood_cost: float = 5.0
+    settle_wood_cost: float = 20.0
+    settle_mineral_cost: float = 10.0
+    research_wood_cost: float = 8.0
+    research_mineral_cost: float = 5.0
+    attack_mineral_cost: float = 3.0
+    # War economy
+    max_defense_military: float = 100.0
+    fortify_defense_bonus: float = 0.8
+    battle_pillage_rate: float = 0.25
+    capture_reconstruct_wood: float = 15.0
+    capture_reconstruct_mineral: float = 10.0
     # Harvest
     harvest_radius: int = 5          # tiles from city that gather action reaches
-    # Technology multipliers on production/military
-    tech_food_bonus: float = 0.1    # +20% food per tech discovered
-    tech_military_bonus: float = 0.3
+    # Science-point accrual per unit of resource spent in research
+    science_per_wood: float = 1.0
+    science_per_mineral: float = 1.5
     # Environmental events (probability per tick)
     drought_prob: float = 0.04
     disease_prob: float = 0.025        # baseline when no land is occupied

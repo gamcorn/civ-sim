@@ -218,8 +218,8 @@ def test_feasible_excludes_attack_when_military_below_5():
 
 
 def test_feasible_excludes_research_when_resources_low():
-    """RESEARCH requires wood_stock >= research_wood_cost and mineral_stock >= research_mineral_cost."""
-    city = make_mock_city(wood_stock=3.0, mineral_stock=2.0)
+    """RESEARCH requires stockpile >= cost thresholds; with empty stockpile it is excluded."""
+    city = make_mock_city(wood_stock=0.0, mineral_stock=0.0)
     feasible = get_feasible_actions(city)
     assert RESEARCH not in feasible
 
@@ -245,44 +245,74 @@ def test_attack_modifier_negative_when_clearly_outgunned():
     assert modifier == -0.5, f"Expected -0.5, got {modifier}"
 
 
+def test_enemy_military_sums_all_rivals():
+    """_enemy_military must sum military across ALL non-self civs, not just the first."""
+    import types
+    from civ_sim.agents.decisions import _enemy_military
+
+    city = make_mock_city(civ_id=0, enemy_military=50)
+    # The mock sets up one rival civ with total_military=50.
+    # Inject a second rival civ to test multi-civ summation.
+    extra_civ = types.SimpleNamespace(civ_id=2, total_military=30)
+    city.model.civilizations.append(extra_civ)
+
+    result = _enemy_military(city)
+    assert result == 80, f"Expected 80 (50+30), got {result}"
+
+
 # ---------------------------------------------------------------------------
-# Feasibility — stockpile gates
+# _feasible — stockpile affordability gates
 # ---------------------------------------------------------------------------
 
 
-def test_feasible_excludes_attack_when_no_minerals():
-    """ATTACK is infeasible when mineral_stock < attack_mineral_cost."""
-    city = make_mock_city(military=20, mineral_stock=0.0)
-    enemy = MagicMock()
-    enemy.civ.civ_id = 1
-    enemy.x = 14
-    enemy.y = 10
-    city.model.agents_by_type = {type(city): [enemy]}
+def test_attack_infeasible_without_mineral_cost(mini_model):
+    """Attack must be infeasible when mineral_stock < attack_mineral_cost."""
+    from civ_sim.agents.city import CityAgent
+    from civ_sim.agents.decisions import get_feasible_actions, ATTACK
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    city = cities[0]
+    city.military = 20
+    city.mineral_stock = 0.0
+
+    # Place an enemy city close enough to pass the target check
+    enemy_civ = mini_model.civilizations[1]
+    enemy_cities = [a for a in mini_model.agents if isinstance(a, CityAgent) and a.civ is enemy_civ]
+    assert enemy_cities, "Need enemy city for this test"
+    enemy = enemy_cities[0]
+    enemy.x, enemy.y = city.x + 3, city.y
+
     feasible = get_feasible_actions(city)
-    assert ATTACK not in feasible
+    assert ATTACK not in feasible, "ATTACK should be infeasible with mineral_stock=0"
 
 
-def test_feasible_excludes_expand_when_insufficient_wood():
-    """EXPAND is infeasible when wood_stock < 50% of expand_wood_cost (threshold=2.5)."""
-    city = make_mock_city(wood_stock=1.0)  # below 2.5 threshold
+def test_expand_infeasible_without_wood_cost(mini_model):
+    """Expand must be infeasible when wood_stock < expand_wood_cost."""
+    from civ_sim.agents.city import CityAgent
+    from civ_sim.agents.decisions import get_feasible_actions, EXPAND
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    city = cities[0]
+    city.wood_stock = 0.0
+
+    # Ensure unclaimed tile exists nearby
+    mini_model.grid.ownership[city.x + 1, city.y] = -1
+
     feasible = get_feasible_actions(city)
-    assert EXPAND not in feasible
+    assert EXPAND not in feasible, "EXPAND should be infeasible with wood_stock=0"
 
 
-# ---------------------------------------------------------------------------
-# _resource_modifier — wood/mineral urgency on GATHER
-# ---------------------------------------------------------------------------
+def test_research_infeasible_without_stockpile(mini_model):
+    """Research must be infeasible when stockpile is below cost thresholds."""
+    from civ_sim.agents.city import CityAgent
+    from civ_sim.agents.decisions import get_feasible_actions, RESEARCH
+    from civ_sim.world.resources import ResourceType
+    cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
+    city = cities[0]
+    # Set tile resources high (old check would allow research)
+    mini_model.grid.layers[ResourceType.WOOD].data[city.x, city.y] = 80.0
+    mini_model.grid.layers[ResourceType.MINERALS].data[city.x, city.y] = 80.0
+    # But empty stockpile
+    city.wood_stock = 0.0
+    city.mineral_stock = 0.0
 
-
-def test_resource_modifier_gather_higher_when_wood_low():
-    """GATHER modifier is higher when wood_stock is depleted versus full."""
-    city_low = make_mock_city(wood_stock=0.0)
-    city_full = make_mock_city(wood_stock=50.0)
-    assert _resource_modifier(GATHER, city_low) > _resource_modifier(GATHER, city_full)
-
-
-def test_resource_modifier_gather_higher_when_mineral_low():
-    """GATHER modifier is higher when mineral_stock is depleted versus full."""
-    city_low = make_mock_city(mineral_stock=0.0)
-    city_full = make_mock_city(mineral_stock=40.0)
-    assert _resource_modifier(GATHER, city_low) > _resource_modifier(GATHER, city_full)
+    feasible = get_feasible_actions(city)
+    assert RESEARCH not in feasible, "RESEARCH should be infeasible with empty stockpile"

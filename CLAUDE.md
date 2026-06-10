@@ -118,9 +118,9 @@ score(action) = Σ(trait_weight[action][trait] × cultural_trait_value)
 Then filters by `_feasible()` (checks prerequisites) and picks the max.
 
 - `gather` is always feasible; `fortify` is always feasible
-- `trade` requires an enemy city within 15 tiles
+- `trade` requires a city within 30 tiles (any civ)
 - `expand` requires an unclaimed tile within 3 tiles
-- `attack` requires an enemy city within 10 tiles and `military >= 5`
+- `attack` requires an enemy city within 25 tiles and `military >= 2` (or 5 if no territorial threat)
 - `research` requires `wood > 10` and `minerals > 5` on city tile
 
 ## LLM Provider System

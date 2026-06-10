@@ -51,7 +51,7 @@ class CivModel(mesa.Model):
         # Epidemic log for visualization: list of (tick, beta)
         self._epidemic_log: list[tuple[int, float]] = []
 
-        # Per-tick attack events for visualization: (ax, ay, tx, ty, civ_id)
+        # Attack events for visualization: list of (src_x, src_y, tgt_x, tgt_y, civ_id)
         self._attack_events: list[tuple[int, int, int, int, int]] = []
 
         # History for visualization
@@ -70,8 +70,19 @@ class CivModel(mesa.Model):
     # ------------------------------------------------------------------
 
     def step(self) -> None:
-        # 1. Resource regeneration
-        self.grid.step()
+        self._attack_events = []
+
+        # Compute climate penalty for this tick's regen BEFORE grid.step().
+        # The counter is set to 20 when the event fires (at end of the same tick),
+        # so the penalty begins the following tick and lasts exactly 20 ticks.
+        if self._climate_penalty_ticks > 0:
+            food_regen_mult = 0.85
+            self._climate_penalty_ticks -= 1
+        else:
+            food_regen_mult = 1.0
+
+        # 1. Resource regeneration (with optional climate dampening)
+        self.grid.step(food_regen_mult=food_regen_mult)
 
         # 2. Border pressure — contested tiles revert to unclaimed
         self._apply_border_reversion()
@@ -81,19 +92,11 @@ class CivModel(mesa.Model):
         if any(e.name == "climate_shift" for e in events):
             self._climate_penalty_ticks = 20
 
-        if self._climate_penalty_ticks > 0:
-            # Temporarily suppress food regen via a one-tick multiplier
-            self.grid.layers[
-                __import__("world.resources", fromlist=["ResourceType"]).ResourceType.FOOD
-            ].data *= 0.85
-            self._climate_penalty_ticks -= 1
-
         disease_events = [e for e in events if e.name == "disease"]
         if disease_events:
             self._apply_disease(beta=disease_events[0].transmission_rate)
 
-        # 4. Clear per-tick attack buffer then dispatch decisions
-        self._attack_events.clear()
+        # 4. Dispatch all decisions (LLM async batch, rule-based sync)
         asyncio.run(self._dispatch_decisions())
 
         # 5. Activate all city agents in random order (reads _pending_action)
