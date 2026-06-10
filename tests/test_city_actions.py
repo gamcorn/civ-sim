@@ -278,3 +278,74 @@ def test_trade_aborts_when_receiver_has_no_mineral_surplus(mini_model):
     assert sender.food_stock == sender_food_before, (
         "Trade should abort when receiver has no mineral surplus"
     )
+
+
+def test_gather_output_scales_with_population(mini_model):
+    """A large-pop city must harvest more than a tiny-pop city given the same territory."""
+    from civ_sim.world.resources import ResourceType
+    cities = _get_cities(mini_model)
+    city = cities[0]
+
+    # Own every tile in harvest radius so neither city is tile-limited
+    r = mini_model.config.harvest_radius
+    for dx in range(-r, r + 1):
+        for dy in range(-r, r + 1):
+            nx, ny = city.x + dx, city.y + dy
+            if 0 <= nx < mini_model.grid.width and 0 <= ny < mini_model.grid.height:
+                mini_model.grid.claim(nx, ny, city.civ.civ_id)
+                mini_model.grid.layers[ResourceType.FOOD].data[nx, ny] = 80.0
+                mini_model.grid.layers[ResourceType.WOOD].data[nx, ny] = 80.0
+                mini_model.grid.layers[ResourceType.MINERALS].data[nx, ny] = 80.0
+
+    # Small pop
+    city.population = 5
+    city.food_stock = 0.0
+    city.wood_stock = 0.0
+    city.mineral_stock = 0.0
+    city._do_gather()
+    small_food = city.food_stock
+    small_wood = city.wood_stock
+
+    # Restore tile resources
+    for dx in range(-r, r + 1):
+        for dy in range(-r, r + 1):
+            nx, ny = city.x + dx, city.y + dy
+            if 0 <= nx < mini_model.grid.width and 0 <= ny < mini_model.grid.height:
+                mini_model.grid.layers[ResourceType.FOOD].data[nx, ny] = 80.0
+                mini_model.grid.layers[ResourceType.WOOD].data[nx, ny] = 80.0
+
+    # Large pop
+    city.population = 500
+    city.food_stock = 0.0
+    city.wood_stock = 0.0
+    city.mineral_stock = 0.0
+    city._do_gather()
+    large_food = city.food_stock
+    large_wood = city.wood_stock
+
+    assert large_food > small_food * 2, (
+        f"Large-pop city should harvest much more food; small={small_food:.1f} large={large_food:.1f}"
+    )
+    assert large_wood > small_wood * 2, (
+        f"Large-pop city should harvest much more wood; small={small_wood:.1f} large={large_wood:.1f}"
+    )
+
+
+def test_gather_zero_pop_yields_nothing(mini_model):
+    """A city with 0 population should harvest nothing (no labor available)."""
+    from civ_sim.world.resources import ResourceType
+    cities = _get_cities(mini_model)
+    city = cities[0]
+
+    r = mini_model.config.harvest_radius
+    for dx in range(-r, r + 1):
+        for dy in range(-r, r + 1):
+            nx, ny = city.x + dx, city.y + dy
+            if 0 <= nx < mini_model.grid.width and 0 <= ny < mini_model.grid.height:
+                mini_model.grid.claim(nx, ny, city.civ.civ_id)
+                mini_model.grid.layers[ResourceType.FOOD].data[nx, ny] = 80.0
+
+    city.population = 0
+    city.food_stock = 0.0
+    city._do_gather()
+    assert city.food_stock == 0.0, "Zero-pop city must not harvest any food"

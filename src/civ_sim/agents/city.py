@@ -141,20 +141,29 @@ class CityAgent(Grid2DMovingAgent):
     # ------------------------------------------------------------------
 
     def _do_gather(self) -> None:
-        """Actively harvest food from all claimed tiles within harvest_radius."""
+        """Harvest from owned tiles; total output capped by population × work_rate."""
         grid = self.model.grid
         cfg = self.model.config
         r = cfg.harvest_radius
         bonus = self.civ.harvest_bonus
+        work_budget = self.population * cfg.work_rate
+        work_done = 0.0
         for dx in range(-r, r + 1):
             for dy in range(-r, r + 1):
+                if work_done >= work_budget:
+                    return
                 nx, ny = self.x + dx, self.y + dy
                 if 0 <= nx < grid.width and 0 <= ny < grid.height:
                     if grid.ownership[nx, ny] == self.civ.civ_id:
-                        self.food_stock += grid.consume(nx, ny, ResourceType.FOOD, 3.0) * bonus
-                        self.food_stock += grid.consume(nx, ny, ResourceType.WATER, 1.0) * 0.5 * bonus
-                        self.wood_stock += grid.consume(nx, ny, ResourceType.WOOD, 1.0) * bonus
-                        self.mineral_stock += grid.consume(nx, ny, ResourceType.MINERALS, 0.5) * bonus
+                        raw_food  = grid.consume(nx, ny, ResourceType.FOOD,     3.0)
+                        raw_water = grid.consume(nx, ny, ResourceType.WATER,    1.0) * 0.5
+                        raw_wood  = grid.consume(nx, ny, ResourceType.WOOD,     1.0)
+                        raw_mins  = grid.consume(nx, ny, ResourceType.MINERALS, 0.5)
+                        # Track raw work (tile extraction), apply bonus to output
+                        work_done += raw_food + raw_water + raw_wood + raw_mins
+                        self.food_stock    += (raw_food + raw_water) * bonus
+                        self.wood_stock    += raw_wood * bonus
+                        self.mineral_stock += raw_mins * bonus
 
     def _do_trade(self) -> None:
         """Offer food surplus to nearest city; it pays minerals if it has surplus."""

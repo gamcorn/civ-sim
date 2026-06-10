@@ -85,6 +85,7 @@ class SimConfig:
     capture_reconstruct_mineral: float = 10.0
     # Harvest
     harvest_radius: int = 5          # tiles from city that gather action reaches
+    work_rate: float = 2.0   # harvest units a person can gather per tick
     # Science-point accrual per unit of resource spent in research
     science_per_wood: float = 1.0
     science_per_mineral: float = 1.5
