@@ -108,7 +108,7 @@ civ-sim/
 
 ## Decision Engine
 
-Six actions: `gather`, `trade`, `expand`, `fortify`, `attack`, `research`.
+Seven actions: `gather`, `trade`, `expand`, `fortify`, `attack`, `research`, `recruit`.
 
 Each tick, `choose_action(city)` scores actions using:
 ```
@@ -117,11 +117,13 @@ score(action) = Σ(trait_weight[action][trait] × cultural_trait_value)
 ```
 Then filters by `_feasible()` (checks prerequisites) and picks the max.
 
-- `gather` is always feasible; `fortify` is always feasible
-- `trade` requires a city within 30 tiles (any civ)
-- `expand` requires an unclaimed tile within 3 tiles
-- `attack` requires an enemy city within 25 tiles and `military >= 2` (or 5 if no territorial threat)
-- `research` requires `wood > 10` and `minerals > 5` on city tile
+- `gather` is always feasible; active harvest is labor-capped at `population × work_rate` total units per tick
+- `fortify` is always feasible; builds `city.fortification` (float) from minerals + wood; decays at `fortification_decay` rate per tick; used in combat damage reduction
+- `trade` requires a city within 30 tiles (any civ) AND `relations >= trade_relation_threshold` (-0.5 default)
+- `expand` requires an unclaimed tile within 3 tiles AND `wood_stock >= expand_wood_cost`
+- `attack` requires an enemy city within 25 tiles, `military >= 2` (or 5 if no territorial threat), AND `mineral_stock >= attack_mineral_cost`
+- `research` requires `wood_stock >= research_wood_cost` AND `mineral_stock >= research_mineral_cost`
+- `recruit` requires `population > initial_pop + recruit_pop_cost` AND `mineral_stock >= recruit_mineral_cost`; drafts population into military respecting the `initial_pop` civilian floor
 
 ## LLM Provider System
 
@@ -180,7 +182,11 @@ Recommended models: `meta-llama/Llama-3.1-70B-Instruct` or `Qwen2.5-72B-Instruct
 
 ## Key Design Decisions
 
-- **Food economy:** cities have a `food_stock` buffer. Passive harvest from city tile (5 units/tick) + active gather from all owned tiles in radius. `military_upkeep` and `food_per_person` are intentionally small (0.02 and 0.05) to avoid gather dominating.
+- **Food economy:** cities have a `food_stock` buffer. Passive harvest from city tile (3 units/tick) + active gather from owned tiles in radius, capped by `population × work_rate`. `military_upkeep` and `food_per_person` are intentionally small (0.02 and 0.05) to avoid gather dominating.
+- **Labor-limited gather:** `_do_gather` tracks total raw extraction across tiles; loop exits early once `work_done >= population × work_rate`. Larger cities harvest more; a city with 50 pop cannot out-gather one with 500.
+- **Fortification as a stat:** `city.fortification` is a float (max `max_fortification`). `_do_fortify` converts minerals+wood into fortification points; `_do_attack` uses `target.fortification / max_fortification` for pillage damage reduction. Fortification decays multiplicatively each tick (`fortification_decay = 0.005`) — cities must keep fortifying to stay defended.
+- **RECRUIT action:** 7th action. Converts population surplus (above `initial_pop` floor) into military at mineral cost. Stochastic rounding matches the rest of the codebase. Scorer favors recruit when enemy military exceeds own; capped at +0.6 modifier.
+- **Civilization relations:** `model.relations: dict[tuple[int,int], float]` indexed by `(min_id, max_id)` — always symmetric. Updated by trade (+0.05), attack (−0.3), and city capture (−0.5). Decays 0.002/tick toward neutral. Blocks trade feasibility when `rel < −0.5`. Shown in LLM prompts so providers can reason diplomatically.
 - **Trade surplus modifier** uses `food_stock` (not grid tile level) to correctly detect surplus.
 - **Fortify modifier** scales proportionally with enemy/self military ratio — not a flat bonus.
 - **Expand modifier** is capped at 0.5 so it doesn't permanently dominate other actions.

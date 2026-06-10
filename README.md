@@ -375,19 +375,35 @@ City home tiles are protected from reversion — a city can never lose its own f
 
 ### Population and expansion
 
-Growth rate is dynamic rather than fixed. Each tick a city grows by `rate_max × food_ratio × demo_factor`, where `food_ratio` is how full the city tile is relative to half-capacity, and `demo_factor` falls linearly as total civilization population approaches 3,000 (floored at 0.1× so growth never fully stops). This reproduces the demographic transition: small, resource-rich civilizations expand rapidly; large, land-saturated ones stagnate.
+Growth rate is dynamic rather than fixed. Each tick a city grows by `rate_max × food_ratio × demo_factor`, where `food_ratio` is how many ticks of food the city's stockpile covers (capped at 1.0 over a 10-tick horizon), and `demo_factor` falls linearly as total civilization population approaches a demographic cap (floored at 0.1× so growth never fully stops). This reproduces the demographic transition: small, resource-rich civilizations expand rapidly; large, land-saturated ones stagnate.
 
 When a city's population hits the cap (500 by default) it automatically sends settlers to found a daughter city on the nearest unclaimed frontier tile at least 6 tiles from any existing city. Settling depletes 50% of the food on tiles within radius 3 of the new site, creating a local resource shock that prevents immediate chaining. A 50-tick cooldown applies before the same city can settle again. Each civilization is capped at 20 cities from voluntary founding, though military conquest can push the count higher.
 
 ### Combat and city capture
 
-Attack is feasible when an enemy city is within **25 Manhattan tiles** and the attacker has at least 5 military. The scoring engine favors attack when `civ_total_military > enemy_total_military × 0.8` — any slight edge is enough. Trade is feasible within **30 tiles**.
+Attack is feasible when an enemy city is within **25 Manhattan tiles**, the attacker has at least 5 military (2 if enemy territory encroaches within 5 tiles), and can pay the mineral attack cost. The scoring engine favors attack when `civ_total_military > enemy_total_military × 0.8`. Trade is feasible within **30 tiles**, subject to the civilization relations gate (see below).
 
-**Resource-driven conflict.** Civilizations under food stress don't just starve — they first seek land (EXPAND scores higher when food stock is low) and then turn to war (ATTACK scores spike under severe scarcity). Cities that detect enemy territory encroaching within 5 tiles get a defensive attack bonus and can attack with as few as 2 military, regardless of overall civ strength.
+**Resource-driven conflict.** Civilizations under food stress don't just starve — they first seek land (EXPAND scores higher when food stock is low) and then turn to war (ATTACK scores spike under severe scarcity).
 
-**City capture.** When a defeated city's population falls below 30% of its founding value, it changes hands: the city, its home tile, and all surrounding territory claimed in the assault transfer to the attacker's civilization. Captures appear as `action=capture` events in the DuckDB log and can dramatically shift the balance mid-run.
+**Fortification.** Cities build a `fortification` stat (0–100) via the FORTIFY action, spending minerals and wood each tick. Fortification decays ~0.5%/tick — cities must keep fortifying to stay defended. In combat, a fully fortified city reduces the attacker's pillage rate proportionally.
 
-Victories capture territory around the defeated city; defeats cost the attacker 25% of its military. Either outcome shifts the balance for subsequent turns.
+**RECRUIT.** The RECRUIT action converts population surplus (above the non-draftable civilian floor `initial_pop`) into military units at mineral cost. Civilizations badly outgunned score it higher.
+
+**City capture.** When a defeated city's population falls below 30% of its founding value, it changes hands: the city, its home tile, and surrounding territory transfer to the attacker. Captures appear as `action=capture` events in the DuckDB log and apply an additional −0.5 relations hit.
+
+Both attacker and defender take casualties proportional to each other's strength (Lanchester exchange). Victories capture adjacent territory; defeats cost the attacker 25% of its military.
+
+### Civilization relations
+
+Each pair of civilizations has a relations score in `[−1.0, 1.0]`, starting at 0 (neutral). The score changes as follows:
+
+| Event | Change |
+|---|---|
+| Successful trade | +0.05 |
+| Attack | −0.30 |
+| City capture | −0.50 |
+
+Relations decay 0.002/tick toward neutral, so old grudges fade over time. A pair with relations below −0.5 cannot trade — cities skip hostile partners when choosing a trade partner. Relations are also included in LLM provider prompts so language-model-driven civilizations can reason about alliances and enmity.
 
 ---
 
@@ -514,7 +530,7 @@ Both flags can be combined. For a full DGX sweep:
 python -m pytest tests/ -v
 ```
 
-All 229 tests should pass. The suite covers the grid, events, logger, civilization state, decision engine, city actions and lifecycle, tech tree, all four LLM providers (mocked), provider factory, council minister functions, council provider triggers and directive application, council integration end-to-end, model dispatch loop, batch completions path, Ray sweep runner, grid backend abstraction, snapshot writer/reader round-trips, CivModel snapshot integration, and replay player helpers and renderer duck-typing.
+All 281 tests should pass. The suite covers the grid, events, logger, civilization state, decision engine, city actions and lifecycle, tech tree, all four LLM providers (mocked), provider factory, council minister functions, council provider triggers and directive application, council integration end-to-end, model dispatch loop, batch completions path, Ray sweep runner, grid backend abstraction, snapshot writer/reader round-trips, CivModel snapshot integration, replay player helpers and renderer duck-typing, labor-limited gathering, fortification stat, RECRUIT action, and civilization relations score.
 
 ---
 
@@ -530,7 +546,7 @@ civ-sim/
 │       ├── agents/
 │       │   ├── city.py            # CityAgent(Grid2DMovingAgent) — primary unit
 │       │   ├── civilization.py    # CulturalTraits + Civilization
-│       │   ├── decisions.py       # Weighted-scoring engine (6 actions)
+│       │   ├── decisions.py       # Weighted-scoring engine (7 actions)
 │       │   └── providers/         # Swappable LLM / rule-based backends
 │       │       ├── council_provider.py   # CouncilProvider + StrategicDirective
 │       │       ├── council_ministers.py  # Async sector / budget / chief minister calls
