@@ -188,6 +188,10 @@ class CityAgent(Grid2DMovingAgent):
         if best is None or best_dist > trade_range:
             return
 
+        rel = self.model.get_relation(self.civ.civ_id, best.civ.civ_id)
+        if rel < cfg.trade_relation_threshold:
+            return
+
         # Sender: offer up to 20% of food surplus over a 10-tick buffer
         food_buffer = self.population * cfg.food_per_person * 10
         food_surplus = max(0.0, self.food_stock - food_buffer)
@@ -207,6 +211,7 @@ class CityAgent(Grid2DMovingAgent):
         best.food_stock += food_offer * 0.9
         best.mineral_stock -= mineral_price
         self.mineral_stock += mineral_price * 0.9
+        self.model.update_relation(self.civ.civ_id, best.civ.civ_id, cfg.trade_relation_bonus)
 
     def _do_expand(self) -> None:
         """Claim an adjacent unclaimed tile with the best resource value."""
@@ -245,6 +250,7 @@ class CityAgent(Grid2DMovingAgent):
             return
 
         self.mineral_stock = max(0.0, self.mineral_stock - cfg.attack_mineral_cost)
+        self.model.update_relation(self.civ.civ_id, target.civ.civ_id, -cfg.attack_relation_penalty)
 
         fort_factor = min(1.0, target.fortification / cfg.max_fortification)
         damage_factor = 1.0 - fort_factor * cfg.fortify_defense_bonus
@@ -296,6 +302,7 @@ class CityAgent(Grid2DMovingAgent):
         self.wood_stock    = max(0.0, self.wood_stock    - cfg.capture_reconstruct_wood    * damage_factor)
         self.mineral_stock = max(0.0, self.mineral_stock - cfg.capture_reconstruct_mineral * damage_factor)
 
+        enemy_civ_id = target.civ.civ_id
         target.civ = self.civ
         self.model.grid.claim(target.x, target.y, self.civ.civ_id)
         self.model.logger.log_event(
@@ -309,6 +316,7 @@ class CityAgent(Grid2DMovingAgent):
             territory=self.model.grid.territory_count(self.civ.civ_id),
             env_event="",
         )
+        self.model.update_relation(self.civ.civ_id, enemy_civ_id, -self.model.config.capture_relation_penalty)
 
     def _maybe_settle(self) -> None:
         """Found a daughter city when population hits the cap and cooldown has elapsed."""

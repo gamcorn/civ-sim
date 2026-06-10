@@ -20,7 +20,19 @@ def build_prompt(city: "CityAgent", feasible_actions: list[str]) -> str:
         c.total_military for c in city.model.civilizations if c.civ_id != civ.civ_id
     )
     techs = ", ".join(sorted(civ.discovered_techs)) or "none"
-    return (
+
+    # Build relations line
+    other_civs = [c for c in city.model.civilizations if c.civ_id != civ.civ_id]
+    if other_civs:
+        rel_parts = []
+        for other in other_civs:
+            rel = city.model.get_relation(civ.civ_id, other.civ_id)
+            rel_parts.append(f"{other.name}: {rel:+.2f}")
+        relations_line = "Relations: " + ", ".join(rel_parts)
+    else:
+        relations_line = ""
+
+    prompt = (
         f"Turn {city.model.steps} | City of {civ.name} civilization\n"
         f"Population: {city.population}  Military: {city.military}"
         f"  Food stock: {city.food_stock:.0f}\n"
@@ -29,8 +41,11 @@ def build_prompt(city: "CityAgent", feasible_actions: list[str]) -> str:
         f"Technologies: {techs}\n"
         f"Territory: {grid.territory_count(civ.civ_id)} tiles"
         f"  |  Enemy military: {enemy_mil}\n"
-        f"Available actions: {', '.join(feasible_actions)}"
     )
+    if relations_line:
+        prompt += f"{relations_line}\n"
+    prompt += f"Available actions: {', '.join(feasible_actions)}"
+    return prompt
 
 
 def parse_response(text: str, feasible: list[str], fallback: str) -> str:

@@ -67,6 +67,9 @@ class CivModel(mesa.Model):
         self.history["minerals_total"] = []
         self.history["wood_total"] = []
 
+        # Diplomatic relations between civ pairs
+        self.relations: dict[tuple[int, int], float] = {}
+
     # ------------------------------------------------------------------
 
     def step(self) -> None:
@@ -106,6 +109,15 @@ class CivModel(mesa.Model):
         for civ in self.civilizations:
             cities = [a for a in self.agents if isinstance(a, CityAgent) and a.civ is civ]
             civ.update_aggregates(cities)
+
+        # 6b. Decay all relations toward neutral
+        cfg = self.config
+        for key in self.relations:
+            val = self.relations[key]
+            if val > 0:
+                self.relations[key] = max(0.0, val - cfg.relation_decay)
+            elif val < 0:
+                self.relations[key] = min(0.0, val + cfg.relation_decay)
 
         # 7. Log each city's state
         env_tag = ",".join(e.name for e in events) if events else ""
@@ -241,6 +253,17 @@ class CivModel(mesa.Model):
             if isinstance(agent, CityAgent):
                 revert_mask[agent.x, agent.y] = False
         ownership[revert_mask] = -1
+
+    def get_relation(self, a: int, b: int) -> float:
+        """Return the relation score for the pair (a, b). Symmetric; returns 0.0 if never set."""
+        key = (min(a, b), max(a, b))
+        return self.relations.get(key, 0.0)
+
+    def update_relation(self, a: int, b: int, delta: float) -> None:
+        """Update relation score for pair (a, b), clamped to [-1.0, 1.0]."""
+        key = (min(a, b), max(a, b))
+        current = self.relations.get(key, 0.0)
+        self.relations[key] = max(-1.0, min(1.0, current + delta))
 
     def _find_settle_location(self, civ: "Civilization") -> tuple[int, int] | None:
         """Return an unclaimed frontier tile at least 6 tiles from every same-civ city."""

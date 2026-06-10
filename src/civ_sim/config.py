@@ -101,6 +101,12 @@ class SimConfig:
     climate_shift_prob: float = 0.002
     # Border dynamics
     border_reversion_prob: float = 0.02
+    # Diplomatic relations
+    relation_decay: float = 0.002           # per-tick decay toward 0
+    trade_relation_bonus: float = 0.05      # relations gain per trade
+    attack_relation_penalty: float = 0.3   # relations loss per attack
+    capture_relation_penalty: float = 0.5  # relations loss on city capture
+    trade_relation_threshold: float = -0.5 # below this, trade is blocked
     # Cultural trait init ranges: (min, max)
     trait_range: tuple = (0.1, 0.9)
     # Logging

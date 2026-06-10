@@ -87,6 +87,13 @@ def make_mock_city(
     model.config.initial_pop = 50
     model.config.recruit_pop_cost = 10
     model.config.recruit_mineral_cost = 3.0
+    model.config.relation_decay = 0.002
+    model.config.trade_relation_bonus = 0.05
+    model.config.attack_relation_penalty = 0.3
+    model.config.capture_relation_penalty = 0.5
+    model.config.trade_relation_threshold = -0.5
+    model.get_relation = MagicMock(return_value=0.0)
+    model.update_relation = MagicMock()
     model.grid = grid
     model.civilizations = [civ, enemy_civ]
     # agents_by_type returns empty by default (no trade partners, no attack targets)

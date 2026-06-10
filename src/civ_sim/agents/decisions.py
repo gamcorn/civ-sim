@@ -152,12 +152,14 @@ def _feasible(agent: "CityAgent", scores: dict[str, float]) -> dict[str, float]:
 
 
 def _has_trade_partner(agent: "CityAgent") -> bool:
-    """True if any other city (any civ) is within trade range."""
+    """True if any other city (any civ) is within trade range with sufficient relations."""
     trade_range = 30 + agent.civ.trade_range_bonus
+    cfg = agent.model.config
     for other in agent.model.agents_by_type.get(type(agent), []):
         if other is not agent:
             dist = abs(other.x - agent.x) + abs(other.y - agent.y)
-            if dist <= trade_range:
+            rel = agent.model.get_relation(agent.civ.civ_id, other.civ.civ_id)
+            if dist <= trade_range and rel >= cfg.trade_relation_threshold:
                 return True
     return False
 
