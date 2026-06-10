@@ -31,6 +31,8 @@ def _make_mock_city(civ_id=0, x=2, y=3):
     city.population = 100.0
     city.military = 20.0
     city.food_stock = 30.0
+    city.wood_stock = 20.0
+    city.mineral_stock = 15.0
     city.last_action = "gather"
     return city
 

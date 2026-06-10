@@ -137,6 +137,8 @@ def test_reader_load_city_civ_round_trip():
         city.population = 75.0
         city.military = 15.0
         city.food_stock = 25.0
+        city.wood_stock = 18.0
+        city.mineral_stock = 12.0
         city.last_action = "expand"
 
         civ_obj = MagicMock()

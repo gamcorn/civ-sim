@@ -47,6 +47,8 @@ class CityState:
     food_stock: float
     last_action: str
     civ: CivState
+    wood_stock: float = 0.0
+    mineral_stock: float = 0.0
 
 
 class _LayerProxy:
@@ -104,6 +106,8 @@ class SnapshotWriter:
                 "pop": float(a.population),
                 "military": float(a.military),
                 "food_stock": float(a.food_stock),
+                "wood_stock": float(a.wood_stock),
+                "mineral_stock": float(a.mineral_stock),
                 "last_action": a.last_action or "",
             }
             for a in agents
@@ -190,6 +194,8 @@ class SnapshotReader:
                 population=city["pop"],
                 military=city["military"],
                 food_stock=city["food_stock"],
+                wood_stock=city.get("wood_stock", 0.0),
+                mineral_stock=city.get("mineral_stock", 0.0),
                 last_action=city["last_action"],
                 civ=civ_map[city["civ_id"]],
             )

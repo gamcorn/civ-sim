@@ -101,10 +101,10 @@ class TerminalRenderer:
         # ── Stats table ───────────────────────────────────────────────────
         col = (
             f"{'Name':<14}{'Pop':>8}{'Military':>10}{'Cities':>7}"
-            f"{'Tiles':>7}{'FoodStock':>10}{'Techs':>6}  {'Actions (top 3)'}"
+            f"{'Tiles':>7}{'FoodStk':>8}{'WoodStk':>8}{'MinStk':>8}{'Techs':>6}  {'Actions (top 3)'}"
         )
         lines.append(f"{_DIM}{col}{_RESET}")
-        lines.append(_DIM + "─" * 80 + _RESET)
+        lines.append(_DIM + "─" * 96 + _RESET)
 
         for civ in model.civilizations:
             cities = [
@@ -114,12 +114,16 @@ class TerminalRenderer:
             total_pop   = sum(c.population for c in cities)
             total_mil   = sum(c.military   for c in cities)
             total_food  = sum(c.food_stock for c in cities)
+            total_wood  = sum(getattr(c, "wood_stock", 0.0) for c in cities)
+            total_min   = sum(getattr(c, "mineral_stock", 0.0) for c in cities)
             territory   = model.grid.territory_count(civ.civ_id)
             techs       = len(civ.discovered_techs)
             n_cities    = len(cities)
 
-            has_disease = any(getattr(c, "_disease_hit_ticks", 0) > 0 for c in cities)
-            has_famine  = any(c.food_stock < 0.1 and c.population > 0 for c in cities)
+            has_disease      = any(getattr(c, "_disease_hit_ticks", 0) > 0 for c in cities)
+            has_famine       = any(c.food_stock < 0.1 and c.population > 0 for c in cities)
+            has_wood_short   = any(getattr(c, "wood_stock", 1.0) < 1.0 and c.population > 0 for c in cities)
+            has_min_short    = any(getattr(c, "mineral_stock", 1.0) < 1.0 for c in cities)
 
             action_counts = Counter(c.last_action for c in cities if c.last_action)
             top_actions   = "  ".join(
@@ -132,6 +136,10 @@ class TerminalRenderer:
                 tags += f"  {_YELLOW}⚕disease{_RESET}"
             if has_famine:
                 tags += f"  {_ORANGE}⚠famine{_RESET}"
+            if has_wood_short:
+                tags += f"  {_ORANGE}⚠wood{_RESET}"
+            if has_min_short:
+                tags += f"  {_ORANGE}⚠min{_RESET}"
 
             lines.append(
                 f"{color}{_BOLD}{civ.name[:14]:<14}{_RESET}"
@@ -139,7 +147,9 @@ class TerminalRenderer:
                 f"{total_mil:>10.0f}"
                 f"{n_cities:>7}"
                 f"{territory:>7}"
-                f"{total_food:>10.0f}"
+                f"{total_food:>8.0f}"
+                f"{total_wood:>8.0f}"
+                f"{total_min:>8.0f}"
                 f"{techs:>6}"
                 f"  {top_actions}"
                 f"{tags}"

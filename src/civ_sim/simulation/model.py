@@ -51,6 +51,9 @@ class CivModel(mesa.Model):
         # Epidemic log for visualization: list of (tick, beta)
         self._epidemic_log: list[tuple[int, float]] = []
 
+        # Per-tick attack events for visualization: (ax, ay, tx, ty, civ_id)
+        self._attack_events: list[tuple[int, int, int, int, int]] = []
+
         # History for visualization
         self.history: dict[str, list] = {"tick": []}
         for i in range(config.num_civs):
@@ -58,6 +61,8 @@ class CivModel(mesa.Model):
             self.history[f"mil_{i}"] = []
             self.history[f"cities_{i}"] = []
             self.history[f"food_civ_{i}"] = []
+            self.history[f"wood_civ_{i}"] = []
+            self.history[f"mineral_civ_{i}"] = []
         self.history["food_total"] = []
         self.history["minerals_total"] = []
         self.history["wood_total"] = []
@@ -87,7 +92,8 @@ class CivModel(mesa.Model):
         if disease_events:
             self._apply_disease(beta=disease_events[0].transmission_rate)
 
-        # 4. Dispatch all decisions (LLM async batch, rule-based sync)
+        # 4. Clear per-tick attack buffer then dispatch decisions
+        self._attack_events.clear()
         asyncio.run(self._dispatch_decisions())
 
         # 5. Activate all city agents in random order (reads _pending_action)
@@ -128,6 +134,12 @@ class CivModel(mesa.Model):
             self.history[f"pop_{i}"].append(civ.total_pop)
             self.history[f"mil_{i}"].append(civ.total_military)
             self.history[f"food_civ_{i}"].append(float(food_layer[mask].sum()))
+            self.history[f"wood_civ_{i}"].append(
+                sum(a.wood_stock for a in self.agents if isinstance(a, CityAgent) and a.civ is civ)
+            )
+            self.history[f"mineral_civ_{i}"].append(
+                sum(a.mineral_stock for a in self.agents if isinstance(a, CityAgent) and a.civ is civ)
+            )
             self.history[f"cities_{i}"].append(
                 sum(1 for a in self.agents if isinstance(a, CityAgent) and a.civ is civ)
             )
