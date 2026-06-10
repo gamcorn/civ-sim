@@ -222,11 +222,13 @@ class CityAgent(Grid2DMovingAgent):
 
     def _do_attack(self) -> None:
         cfg = self.model.config
-        self.mineral_stock = max(0.0, self.mineral_stock - cfg.attack_mineral_cost)
 
+        # Find target first; abort without cost if no valid target exists
         target = _attack_target(self)
         if target is None:
             return
+
+        self.mineral_stock = max(0.0, self.mineral_stock - cfg.attack_mineral_cost)
 
         fort_factor = min(1.0, target.military / cfg.max_defense_military)
         damage_factor = 1.0 - fort_factor * cfg.fortify_defense_bonus
@@ -241,8 +243,10 @@ class CityAgent(Grid2DMovingAgent):
         if self.model.random.random() < win_prob:
             # Attacker takes proportional losses from enemy resistance (Lanchester)
             attacker_loss = max(1, int(self.military * (enemy_str / (my_str + enemy_str + 1e-6)) * 0.3))
+            pre_loss_military = self.military
             self.military = max(0, self.military - attacker_loss)
-            target.military = max(0, target.military - int(self.military * 0.3))
+            # Defender damage uses pre-casualty attacker strength (simultaneous exchange)
+            target.military = max(0, target.military - int(pre_loss_military * 0.3))
             target.population = max(0, target.population - int(target.population * 0.2))
 
             raid_f = cfg.battle_pillage_rate * damage_factor
