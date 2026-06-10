@@ -51,6 +51,9 @@ class CivModel(mesa.Model):
         # Epidemic log for visualization: list of (tick, beta)
         self._epidemic_log: list[tuple[int, float]] = []
 
+        # Attack events for visualization: list of (src_x, src_y, tgt_x, tgt_y, civ_id)
+        self._attack_events: list[tuple[int, int, int, int, int]] = []
+
         # History for visualization
         self.history: dict[str, list] = {"tick": []}
         for i in range(config.num_civs):
@@ -65,6 +68,9 @@ class CivModel(mesa.Model):
     # ------------------------------------------------------------------
 
     def step(self) -> None:
+        # Reset per-tick attack events
+        self._attack_events = []
+
         # 1. Resource regeneration
         self.grid.step()
 

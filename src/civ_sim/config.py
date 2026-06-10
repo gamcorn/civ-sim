@@ -57,6 +57,32 @@ class SimConfig:
     # Military
     initial_military: int = 10
     military_upkeep: float = 0.08    # food per military unit per tick
+    # Stockpile initial values
+    initial_wood_stock: float = 20.0
+    initial_mineral_stock: float = 20.0
+    # Wood/mineral upkeep per tick
+    wood_per_person: float = 0.01
+    mineral_per_person: float = 0.005
+    mineral_per_military: float = 0.02
+    wood_per_military: float = 0.01
+    # Shortage penalties
+    wood_shortage_rate: float = 0.02
+    mineral_shortage_rate: float = 0.03
+    # Action costs (stockpile-based)
+    fortify_mineral_cost: float = 8.0
+    fortify_wood_cost: float = 4.0
+    expand_wood_cost: float = 5.0
+    settle_wood_cost: float = 20.0
+    settle_mineral_cost: float = 10.0
+    research_wood_cost: float = 8.0
+    research_mineral_cost: float = 5.0
+    attack_mineral_cost: float = 3.0
+    # War economy
+    max_defense_military: float = 100.0
+    fortify_defense_bonus: float = 0.8
+    battle_pillage_rate: float = 0.25
+    capture_reconstruct_wood: float = 15.0
+    capture_reconstruct_mineral: float = 10.0
     # Harvest
     harvest_radius: int = 5          # tiles from city that gather action reaches
     # Technology multipliers on production/military
