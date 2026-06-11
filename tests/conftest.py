@@ -42,6 +42,7 @@ def make_mock_city(
     civ.traits = traits
     civ.total_military = military
     civ.discovered_techs = set(techs or [])
+    civ.unlocked_actions = set()
     civ.trade_range_bonus = 0
     civ.military_tech_bonus = 0.0
 
@@ -73,6 +74,9 @@ def make_mock_city(
             return minerals
         return 50.0  # food default
     grid.get.side_effect = _get
+    grid.avg_soil_fertility.return_value = 50.0
+    grid.avg_mineral_richness.return_value = 50.0
+    grid.avg_forest_density.return_value = 50.0
 
     # Model
     model = MagicMock()

@@ -13,8 +13,11 @@ FORTIFY = "fortify"
 ATTACK = "attack"
 RESEARCH = "research"
 RECRUIT = "recruit"
+CULTIVATE = "cultivate"
+MINE      = "mine"
+WOODCUT   = "woodcut"
 
-ALL_ACTIONS = [GATHER, TRADE, EXPAND, FORTIFY, ATTACK, RESEARCH, RECRUIT]
+ALL_ACTIONS = [GATHER, TRADE, EXPAND, FORTIFY, ATTACK, RESEARCH, RECRUIT, CULTIVATE, MINE, WOODCUT]
 
 # Base weights per action for each cultural trait
 # Format: action → {trait → weight}
@@ -26,6 +29,9 @@ _WEIGHTS: dict[str, dict[str, float]] = {
     ATTACK:   {"aggressiveness": 0.6,  "trust": -0.5, "innovation": 0.0,  "tribalism": 0.3,  "risk_tolerance": 0.4},
     RESEARCH: {"aggressiveness": -0.2, "trust": 0.1,  "innovation": 0.7,  "tribalism": 0.0,  "risk_tolerance": 0.1},
     RECRUIT:  {"aggressiveness": 0.4,  "trust": -0.1, "innovation": -0.1, "tribalism": 0.3,  "risk_tolerance": 0.2},
+    CULTIVATE: {"aggressiveness": -0.2, "trust":  0.2, "innovation": 0.1, "tribalism": 0.3, "risk_tolerance": -0.1},
+    MINE:      {"aggressiveness":  0.1, "trust":  0.0, "innovation": 0.2, "tribalism": 0.2, "risk_tolerance":  0.1},
+    WOODCUT:   {"aggressiveness": -0.1, "trust":  0.1, "innovation": 0.0, "tribalism": 0.2, "risk_tolerance":  0.0},
 }
 
 
@@ -100,8 +106,24 @@ def _resource_modifier(action: str, agent: "CityAgent") -> float:
         if enemy_mil > civ_mil:
             return min(0.6, 0.6 * (1.0 - civ_mil / (enemy_mil + 1e-6)))
         return 0.0
+    if action == CULTIVATE:
+        avg_fert = _avg_soil_fertility(agent)
+        food_urgency = max(0.0, 0.4 - stock_ratio) * 1.2
+        fertility_bonus = (avg_fert / max_r) * 0.3
+        return food_urgency + fertility_bonus
+    if action == MINE:
+        return max(0.0, 0.4 - min_ratio) * 1.0
+    if action == WOODCUT:
+        wood_ratio = wood / max_r
+        return max(0.0, 0.4 - wood_ratio) * 1.0
 
     return 0.0
+
+
+def _avg_soil_fertility(agent: "CityAgent") -> float:
+    return agent.model.grid.avg_soil_fertility(
+        agent.civ.civ_id, agent.x, agent.y, agent.model.config.harvest_radius
+    )
 
 
 def _enemy_military(agent: "CityAgent") -> int:
@@ -147,6 +169,13 @@ def _feasible(agent: "CityAgent", scores: dict[str, float]) -> dict[str, float]:
     min_pop = cfg.initial_pop + cfg.recruit_pop_cost
     if agent.population > min_pop and agent.mineral_stock >= cfg.recruit_mineral_cost:
         feasible[RECRUIT] = scores[RECRUIT]
+
+    if CULTIVATE in agent.civ.unlocked_actions:
+        feasible[CULTIVATE] = scores[CULTIVATE]
+    if MINE in agent.civ.unlocked_actions:
+        feasible[MINE] = scores[MINE]
+    if WOODCUT in agent.civ.unlocked_actions:
+        feasible[WOODCUT] = scores[WOODCUT]
 
     return feasible
 

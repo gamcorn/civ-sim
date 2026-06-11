@@ -6,6 +6,7 @@ from mesa.discrete_space import Grid2DMovingAgent
 
 from civ_sim.agents.decisions import (
     choose_action, GATHER, TRADE, EXPAND, FORTIFY, ATTACK, RESEARCH, RECRUIT,
+    CULTIVATE, MINE, WOODCUT,
     _attack_target, _has_unclaimed_neighbor,
 )
 from civ_sim.world.resources import ResourceType
@@ -36,6 +37,9 @@ class CityAgent(Grid2DMovingAgent):
         self._settle_cooldown: int = 0  # ticks until this city can settle again
         self._disease_hit_ticks: int = 0  # ticks remaining to show disease overlay
         self.fortification: float = 0.0  # defensive structures (built by fortify, decays)
+        self.farmer_ratio:     float = 0.0
+        self.miner_ratio:      float = 0.0
+        self.woodcutter_ratio: float = 0.0
 
         # Claim starting tile
         model.grid.claim(x, y, civ.civ_id)
@@ -65,6 +69,9 @@ class CityAgent(Grid2DMovingAgent):
         self.food_stock += self.model.grid.consume(self.x, self.y, ResourceType.FOOD, 3.0)
         self.wood_stock += self.model.grid.consume(self.x, self.y, ResourceType.WOOD, 1.5)
         self.mineral_stock += self.model.grid.consume(self.x, self.y, ResourceType.MINERALS, 1.0)
+
+        # Labor-based production (post-tech; no-op if no techs discovered)
+        self._produce_labor()
 
         # Consumption from stockpile
         needed = self.population * cfg.food_per_person + self.military * cfg.military_upkeep
@@ -143,6 +150,12 @@ class CityAgent(Grid2DMovingAgent):
             self._do_research()
         elif action == RECRUIT:
             self._do_recruit()
+        elif action == CULTIVATE:
+            self._do_cultivate()
+        elif action == MINE:
+            self._do_mine()
+        elif action == WOODCUT:
+            self._do_woodcut()
 
     # ------------------------------------------------------------------
 
@@ -394,6 +407,83 @@ class CityAgent(Grid2DMovingAgent):
         if self.model.random.random() < (military_f - military_gained):
             military_gained += 1
         self.military += military_gained
+
+    def _shift_labor_ratio(self, role: str, delta: float) -> None:
+        ratios = {
+            "farmer":      self.farmer_ratio,
+            "miner":       self.miner_ratio,
+            "woodcutter":  self.woodcutter_ratio,
+        }
+        ratios[role] = min(1.0, ratios[role] + delta)
+        total = sum(ratios.values())
+        if total > 1.0:
+            for k in ratios:
+                if k != role:
+                    ratios[k] *= (1.0 - ratios[role]) / (total - ratios[role] + 1e-9)
+        self.farmer_ratio     = ratios["farmer"]
+        self.miner_ratio      = ratios["miner"]
+        self.woodcutter_ratio = ratios["woodcutter"]
+
+    def _produce_labor(self) -> None:
+        cfg = self.model.config
+        grid = self.model.grid
+        civ = self.civ
+        civilian_pop = self.population - self.military
+
+        if "agriculture" in civ.discovered_techs and self.farmer_ratio > 0:
+            farmers = int(civilian_pop * self.farmer_ratio)
+            if farmers > 0:
+                avg_fert = grid.avg_soil_fertility(
+                    civ.civ_id, self.x, self.y, cfg.harvest_radius
+                )
+                self.food_stock += (
+                    farmers * (avg_fert / 100.0) * civ.land_productivity * cfg.work_rate
+                )
+
+        if "mining" in civ.discovered_techs and self.miner_ratio > 0:
+            miners = int(civilian_pop * self.miner_ratio)
+            if miners > 0:
+                avg_rich = grid.avg_mineral_richness(
+                    civ.civ_id, self.x, self.y, cfg.harvest_radius
+                )
+                self.mineral_stock += (
+                    miners * (avg_rich / 100.0) * civ.mining_efficiency * cfg.work_rate
+                )
+
+        if "forestry" in civ.discovered_techs and self.woodcutter_ratio > 0:
+            woodcutters = int(civilian_pop * self.woodcutter_ratio)
+            if woodcutters > 0:
+                avg_forest = grid.avg_forest_density(
+                    civ.civ_id, self.x, self.y, cfg.harvest_radius
+                )
+                self.wood_stock += (
+                    woodcutters * (avg_forest / 100.0) * civ.forestry_efficiency * cfg.work_rate
+                )
+
+        grid.apply_labor_degradation(
+            self.x, self.y, cfg.harvest_radius, civ.civ_id,
+            self.farmer_ratio, self.miner_ratio, self.woodcutter_ratio, cfg,
+        )
+
+    def _do_cultivate(self) -> None:
+        cfg = self.model.config
+        wood_spent    = min(self.wood_stock,    cfg.cultivate_wood_cost)
+        mineral_spent = min(self.mineral_stock, cfg.cultivate_mineral_cost)
+        self.wood_stock    -= wood_spent
+        self.mineral_stock -= mineral_spent
+        self._shift_labor_ratio("farmer", cfg.labor_ratio_delta)
+
+    def _do_mine(self) -> None:
+        cfg = self.model.config
+        mineral_spent = min(self.mineral_stock, cfg.mine_mineral_cost)
+        self.mineral_stock -= mineral_spent
+        self._shift_labor_ratio("miner", cfg.labor_ratio_delta)
+
+    def _do_woodcut(self) -> None:
+        cfg = self.model.config
+        wood_spent = min(self.wood_stock, cfg.woodcut_wood_cost)
+        self.wood_stock -= wood_spent
+        self._shift_labor_ratio("woodcutter", cfg.labor_ratio_delta)
 
     def _collapse(self) -> None:
         self.model.grid.ownership[self.x, self.y] = -1  # release home tile only

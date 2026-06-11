@@ -196,3 +196,114 @@ def test_land_productivity_caps_at_max(mini_model):
     city.civ.land_productivity = mini_model.config.land_productivity_max - 0.01
     mini_model.tech_engine._discover("agriculture", city)
     assert city.civ.land_productivity <= mini_model.config.land_productivity_max
+
+
+def test_city_has_labor_ratio_fields(mini_model):
+    city = _get_city(mini_model)
+    assert hasattr(city, "farmer_ratio")
+    assert hasattr(city, "miner_ratio")
+    assert hasattr(city, "woodcutter_ratio")
+    assert city.farmer_ratio == 0.0
+    assert city.miner_ratio == 0.0
+    assert city.woodcutter_ratio == 0.0
+
+
+def test_shift_labor_ratio_increases_target(mini_model):
+    city = _get_city(mini_model)
+    city.farmer_ratio = 0.0
+    city._shift_labor_ratio("farmer", 0.1)
+    assert abs(city.farmer_ratio - 0.1) < 1e-6
+
+
+def test_shift_labor_ratio_sum_never_exceeds_one(mini_model):
+    city = _get_city(mini_model)
+    city.farmer_ratio = 0.5
+    city.miner_ratio = 0.4
+    city.woodcutter_ratio = 0.0
+    city._shift_labor_ratio("woodcutter", 0.2)
+    total = city.farmer_ratio + city.miner_ratio + city.woodcutter_ratio
+    assert total <= 1.0 + 1e-9
+
+
+def test_labor_production_scales_with_population(mini_model):
+    city = _get_city(mini_model)
+    city.civ.discovered_techs.add("agriculture")
+    city.civ.unlocked_actions.add("cultivate")
+    city.civ.land_productivity = 1.0
+    mini_model.grid.ownership[:] = city.civ.civ_id
+    mini_model.grid.soil_fertility[:] = 80.0
+
+    city.farmer_ratio = 0.5
+    city.population = 200
+    city.military = 0
+    city.food_stock = 0.0
+    city._produce_labor()
+    food_large_pop = city.food_stock
+
+    city.farmer_ratio = 0.5
+    city.population = 100
+    city.military = 0
+    city.food_stock = 0.0
+    mini_model.grid.soil_fertility[:] = 80.0
+    city._produce_labor()
+    food_small_pop = city.food_stock
+
+    assert food_large_pop > food_small_pop * 1.5
+
+
+def test_epidemic_reduces_labor_output(mini_model):
+    city = _get_city(mini_model)
+    city.civ.discovered_techs.add("agriculture")
+    city.civ.unlocked_actions.add("cultivate")
+    city.civ.land_productivity = 1.0
+    mini_model.grid.ownership[:] = city.civ.civ_id
+    mini_model.grid.soil_fertility[:] = 80.0
+
+    city.farmer_ratio = 0.5
+    city.military = 0
+    city.population = 200
+    city.food_stock = 0.0
+    city._produce_labor()
+    food_healthy = city.food_stock
+
+    city.population = 100
+    city.food_stock = 0.0
+    mini_model.grid.soil_fertility[:] = 80.0
+    city._produce_labor()
+    food_epidemic = city.food_stock
+
+    assert food_epidemic < food_healthy
+
+
+def test_produce_labor_no_output_without_tech(mini_model):
+    city = _get_city(mini_model)
+    city.civ.discovered_techs.discard("agriculture")
+    city.civ.discovered_techs.discard("mining")
+    city.civ.discovered_techs.discard("forestry")
+    city.farmer_ratio = 0.8
+    city.miner_ratio = 0.1
+    city.woodcutter_ratio = 0.1
+    city.food_stock = 0.0
+    city.mineral_stock = 0.0
+    city.wood_stock = 0.0
+    mini_model.grid.ownership[:] = city.civ.civ_id
+    city._produce_labor()
+    assert city.food_stock == 0.0
+    assert city.mineral_stock == 0.0
+    assert city.wood_stock == 0.0
+
+
+def test_soil_degrades_after_produce_labor(mini_model):
+    city = _get_city(mini_model)
+    city.civ.discovered_techs.add("agriculture")
+    city.civ.unlocked_actions.add("cultivate")
+    city.civ.land_productivity = 1.0
+    mini_model.grid.ownership[city.x, city.y] = city.civ.civ_id
+    mini_model.grid.soil_fertility[city.x, city.y] = 90.0
+    mini_model.grid.base_soil_fertility[city.x, city.y] = 90.0
+    city.farmer_ratio = 1.0
+    city.miner_ratio = 0.0
+    city.woodcutter_ratio = 0.0
+    initial = float(mini_model.grid.soil_fertility[city.x, city.y])
+    city._produce_labor()
+    assert float(mini_model.grid.soil_fertility[city.x, city.y]) < initial
