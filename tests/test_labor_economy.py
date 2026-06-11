@@ -129,3 +129,70 @@ def test_civ_labor_defaults():
     assert civ.forestry_efficiency == 0.5
     assert isinstance(civ.unlocked_actions, set)
     assert len(civ.unlocked_actions) == 0
+
+
+from civ_sim.technology.discovery import TECH_TREE, TECH_COSTS, TECH_EFFECTS, TechEngine
+from civ_sim.agents.city import CityAgent
+
+
+def _get_city(mini_model):
+    return next(a for a in mini_model.agents if isinstance(a, CityAgent))
+
+
+def test_mining_in_tech_tree():
+    assert "mining" in TECH_TREE
+    assert "mining" in TECH_COSTS
+
+
+def test_forestry_in_tech_tree():
+    assert "forestry" in TECH_TREE
+    assert "forestry" in TECH_COSTS
+
+
+def test_agriculture_unlocks_cultivate(mini_model):
+    city = _get_city(mini_model)
+    city.civ.unlocked_actions.clear()
+    mini_model.tech_engine._discover("agriculture", city)
+    assert "cultivate" in city.civ.unlocked_actions
+
+
+def test_mining_unlocks_mine(mini_model):
+    city = _get_city(mini_model)
+    city.civ.unlocked_actions.clear()
+    mini_model.tech_engine._discover("mining", city)
+    assert "mine" in city.civ.unlocked_actions
+
+
+def test_forestry_unlocks_woodcut(mini_model):
+    city = _get_city(mini_model)
+    city.civ.unlocked_actions.clear()
+    mini_model.tech_engine._discover("forestry", city)
+    assert "woodcut" in city.civ.unlocked_actions
+
+
+def test_agriculture_raises_land_productivity(mini_model):
+    city = _get_city(mini_model)
+    before = city.civ.land_productivity
+    mini_model.tech_engine._discover("agriculture", city)
+    assert city.civ.land_productivity > before
+
+
+def test_mining_raises_mining_efficiency(mini_model):
+    city = _get_city(mini_model)
+    before = city.civ.mining_efficiency
+    mini_model.tech_engine._discover("mining", city)
+    assert city.civ.mining_efficiency > before
+
+
+def test_forestry_raises_forestry_efficiency(mini_model):
+    city = _get_city(mini_model)
+    before = city.civ.forestry_efficiency
+    mini_model.tech_engine._discover("forestry", city)
+    assert city.civ.forestry_efficiency > before
+
+
+def test_land_productivity_caps_at_max(mini_model):
+    city = _get_city(mini_model)
+    city.civ.land_productivity = mini_model.config.land_productivity_max - 0.01
+    mini_model.tech_engine._discover("agriculture", city)
+    assert city.civ.land_productivity <= mini_model.config.land_productivity_max
