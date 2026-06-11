@@ -104,6 +104,7 @@ def make_mock_city(
     city.model = model
     city.population = pop
     city.military = military
+    city.fortification = 0.0
     city.food_stock = food_stock
     city.wood_stock = wood_stock
     city.mineral_stock = mineral_stock

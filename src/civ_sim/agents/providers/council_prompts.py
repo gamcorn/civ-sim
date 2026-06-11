@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 MINISTER_SPECS: list[dict] = [
     {
         "name": "Minister of War",
-        "domain": "military strength, threats, and defense",
-        "actions": ["attack", "fortify"],
+        "domain": "military strength, threats, defense, and troop recruitment",
+        "actions": ["attack", "fortify", "recruit"],
         "trait_key": "aggressiveness",
     },
     {
@@ -104,8 +104,8 @@ CHIEF_SCHEMA_DICT = {
         "era_goal": {"type": "string"},
         "action_weights": {
             "type": "object",
-            "properties": {a: {"type": "number"} for a in ["gather", "trade", "expand", "fortify", "attack", "research"]},
-            "required": ["gather", "trade", "expand", "fortify", "attack", "research"],
+            "properties": {a: {"type": "number"} for a in ["gather", "trade", "expand", "fortify", "attack", "research", "recruit"]},
+            "required": ["gather", "trade", "expand", "fortify", "attack", "research", "recruit"],
         },
         "reasoning": {"type": "string"},
     },
@@ -115,7 +115,7 @@ CHIEF_SCHEMA = json.dumps({
     "era_goal": "one sentence strategy",
     "action_weights": {
         "gather": 0.0, "trade": 0.0, "expand": 0.0,
-        "fortify": 0.0, "attack": 0.0, "research": 0.0,
+        "fortify": 0.0, "attack": 0.0, "research": 0.0, "recruit": 0.0,
     },
     "reasoning": "brief synthesis",
 }, indent=2)
@@ -126,8 +126,8 @@ CHIEF_LITE_SCHEMA_DICT = {
     "properties": {
         "action_weights": {
             "type": "object",
-            "properties": {a: {"type": "number"} for a in ["gather", "trade", "expand", "fortify", "attack", "research"]},
-            "required": ["gather", "trade", "expand", "fortify", "attack", "research"],
+            "properties": {a: {"type": "number"} for a in ["gather", "trade", "expand", "fortify", "attack", "research", "recruit"]},
+            "required": ["gather", "trade", "expand", "fortify", "attack", "research", "recruit"],
         },
     },
     "required": ["action_weights"],
@@ -135,7 +135,7 @@ CHIEF_LITE_SCHEMA_DICT = {
 CHIEF_LITE_SCHEMA = json.dumps({
     "action_weights": {
         "gather": 0.0, "trade": 0.0, "expand": 0.0,
-        "fortify": 0.0, "attack": 0.0, "research": 0.0,
+        "fortify": 0.0, "attack": 0.0, "research": 0.0, "recruit": 0.0,
     },
 }, indent=2)
 
@@ -194,6 +194,7 @@ def build_civ_state_snapshot(
         return f"Civilization: {civ.name} — no cities remaining."
     total_pop = sum(c.population for c in cities)
     total_military = sum(c.military for c in cities)
+    avg_fort = sum(c.fortification for c in cities) / len(cities)
     avg_food = sum(c.food_stock for c in cities) / len(cities)
     total_minerals = sum(model.grid.get(c.x, c.y, ResourceType.MINERALS) for c in cities)
     total_wood = sum(model.grid.get(c.x, c.y, ResourceType.WOOD) for c in cities)
@@ -202,7 +203,7 @@ def build_civ_state_snapshot(
     own_block = (
         f"Turn: {model.steps}\n"
         f"Civilization: {civ.name}\n"
-        f"Population: {total_pop}  Military: {total_military}  Cities: {len(cities)}\n"
+        f"Population: {total_pop}  Military: {total_military}  Avg fortification: {avg_fort:.0f}  Cities: {len(cities)}\n"
         f"Avg food stock: {avg_food:.1f}  Minerals (cities): {total_minerals:.0f}"
         f"  Wood (cities): {total_wood:.0f}\n"
         f"Tech level: {civ.tech_level}  Technologies: {techs}\n"
@@ -230,10 +231,11 @@ def build_civ_state_snapshot(
     for e in enemies:
         city_count = getattr(e, "city_count", 0)
         territory = model.grid.territory_count(e.civ_id)
+        rel = model.get_relation(civ.civ_id, e.civ_id)
         lines.append(
             f"  {e.name}: pop {_fmt(e.total_pop)} | military {_fmt(e.total_military)}"
             f" | cities {_fmt(city_count)} | tech {_fmt(e.tech_level)}"
-            f" | territory {_fmt(territory)} tiles"
+            f" | territory {_fmt(territory)} tiles | relations {rel:+.2f}"
         )
 
     return own_block + "\n\n" + header + "\n" + "\n".join(lines)
