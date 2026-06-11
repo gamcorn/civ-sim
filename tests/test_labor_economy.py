@@ -318,3 +318,59 @@ def test_soil_degrades_after_produce_labor(mini_model):
     initial = float(mini_model.grid.soil_fertility[city.x, city.y])
     city._produce_labor()
     assert float(mini_model.grid.soil_fertility[city.x, city.y]) < initial
+
+
+from civ_sim.agents.decisions import (
+    CULTIVATE, MINE, WOODCUT, GATHER,
+    get_feasible_actions,
+)
+from tests.conftest import make_mock_city
+
+
+def test_cultivate_not_feasible_before_agriculture():
+    city = make_mock_city(techs=[], wood_stock=50.0, mineral_stock=50.0)
+    city.civ.unlocked_actions = set()
+    feasible = get_feasible_actions(city)
+    assert CULTIVATE not in feasible
+
+
+def test_cultivate_feasible_after_agriculture():
+    city = make_mock_city(techs=["agriculture"], wood_stock=50.0, mineral_stock=50.0)
+    city.civ.unlocked_actions = {"cultivate"}
+    feasible = get_feasible_actions(city)
+    assert CULTIVATE in feasible
+
+
+def test_mine_not_feasible_before_mining():
+    city = make_mock_city(techs=[], mineral_stock=50.0)
+    city.civ.unlocked_actions = set()
+    feasible = get_feasible_actions(city)
+    assert MINE not in feasible
+
+
+def test_mine_feasible_after_mining():
+    city = make_mock_city(techs=["mining"], mineral_stock=50.0)
+    city.civ.unlocked_actions = {"mine"}
+    feasible = get_feasible_actions(city)
+    assert MINE in feasible
+
+
+def test_woodcut_feasible_after_forestry():
+    city = make_mock_city(techs=["forestry"], wood_stock=50.0)
+    city.civ.unlocked_actions = {"woodcut"}
+    feasible = get_feasible_actions(city)
+    assert WOODCUT in feasible
+
+
+def test_gather_always_feasible():
+    city = make_mock_city(techs=[])
+    city.civ.unlocked_actions = set()
+    feasible = get_feasible_actions(city)
+    assert GATHER in feasible
+
+
+def test_gather_still_feasible_after_agriculture():
+    city = make_mock_city(techs=["agriculture"], wood_stock=50.0, mineral_stock=50.0)
+    city.civ.unlocked_actions = {"cultivate"}
+    feasible = get_feasible_actions(city)
+    assert GATHER in feasible
