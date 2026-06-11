@@ -57,6 +57,12 @@ class Civilization:
         self.military_tech_bonus: float = 0.0   # additive military strength bonus from tech
         self.trade_range_bonus: int = 0          # extra tiles added to base trade range (30)
 
+        # Labor economy fields (Tasks 3-4)
+        self.land_productivity:   float = 0.5
+        self.mining_efficiency:   float = 0.5
+        self.forestry_efficiency: float = 0.5
+        self.unlocked_actions:    set[str] = set()
+
         # Council emergency tracking — updated by CouncilProvider after each directive
         self._pop_at_last_directive: int = 0
         self._techs_at_last_directive: int = 0

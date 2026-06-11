@@ -105,3 +105,27 @@ def test_soil_does_not_degrade_below_zero(grid, cfg):
     assert float(grid.soil_fertility[10, 10]) >= 0.0
     assert float(grid.mineral_richness[10, 10]) >= 0.0
     assert float(grid.forest_density[10, 10]) >= 0.0
+
+
+from civ_sim.agents.civilization import Civilization, CulturalTraits
+
+
+def _make_civ():
+    return Civilization(0, "Alpha", CulturalTraits())
+
+
+def test_civ_has_labor_productivity_fields():
+    civ = _make_civ()
+    assert hasattr(civ, "land_productivity")
+    assert hasattr(civ, "mining_efficiency")
+    assert hasattr(civ, "forestry_efficiency")
+    assert hasattr(civ, "unlocked_actions")
+
+
+def test_civ_labor_defaults():
+    civ = _make_civ()
+    assert civ.land_productivity == 0.5
+    assert civ.mining_efficiency == 0.5
+    assert civ.forestry_efficiency == 0.5
+    assert isinstance(civ.unlocked_actions, set)
+    assert len(civ.unlocked_actions) == 0
