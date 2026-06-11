@@ -153,7 +153,7 @@ Works with any OpenAI-compatible server: vLLM, Ollama, LM Studio, NVIDIA NIM, or
 
 Each civilization gets a council of advisors that convenes periodically — and on emergency triggers — to issue a `StrategicDirective`: a civ-wide action-weight overlay that biases all city decisions for the next N ticks.
 
-**How it works:** 4 sector ministers (War, Economy, Science, Expansion) deliberate in parallel, a Budget minister reviews their proposals, and a Chief of Staff synthesises a directive. The directive additively shifts the existing rule-based scoring engine — cities still make tactical decisions locally, but the LLM shapes their strategic bias.
+**How it works:** 4 sector ministers (War, Economy, Science, Expansion) deliberate in parallel, a Budget minister reviews their proposals, and a Chief of Staff synthesises a directive. The directive additively shifts the existing rule-based scoring engine — cities still make tactical decisions locally, but the LLM shapes their strategic bias. The War minister covers `attack`, `fortify`, and `recruit`; the chief schema requires weights for all 7 actions.
 
 **Setup (DGX Spark / any NVIDIA GPU — Nemotron-70B):**
 
@@ -198,8 +198,10 @@ Each council session includes an intelligence report showing the enemy civilizat
 
 ```
 Intelligence Report:
-  Beta: pop 142 | military 38 | cities 3 | tech 2 | territory 67 tiles
+  Beta: pop 142 | military 38 | cities 3 | tech 2 | territory 67 tiles | relations +0.12
 ```
+
+The own-civilization block also reports `Avg fortification` across all cities, giving the War minister the context to balance FORTIFY vs RECRUIT decisions.
 
 `--fog-of-war F` adds multiplicative noise to every enemy figure before it reaches the ministers. At `F=0.3` a reported population of 100 could appear anywhere from 70 to 130; at `F=1.0` the range is effectively 0–200% of the true value. Noise is seeded from the same RNG as the rest of the simulation, so runs are still reproducible.
 

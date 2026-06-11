@@ -65,7 +65,7 @@ civ-sim/
 │       ├── agents/
 │       │   ├── city.py            # CityAgent(Grid2DMovingAgent) — primary unit
 │       │   ├── civilization.py    # CulturalTraits + Civilization
-│       │   ├── decisions.py       # Weighted-scoring engine (6 actions)
+│       │   ├── decisions.py       # Weighted-scoring engine (7 actions)
 │       │   └── providers/         # Swappable decision backends
 │       │       ├── base.py
 │       │       ├── rule_based.py
@@ -186,7 +186,8 @@ Recommended models: `meta-llama/Llama-3.1-70B-Instruct` or `Qwen2.5-72B-Instruct
 - **Labor-limited gather:** `_do_gather` tracks total raw extraction across tiles; loop exits early once `work_done >= population × work_rate`. Larger cities harvest more; a city with 50 pop cannot out-gather one with 500.
 - **Fortification as a stat:** `city.fortification` is a float (max `max_fortification`). `_do_fortify` converts minerals+wood into fortification points; `_do_attack` uses `target.fortification / max_fortification` for pillage damage reduction. Fortification decays multiplicatively each tick (`fortification_decay = 0.005`) — cities must keep fortifying to stay defended.
 - **RECRUIT action:** 7th action. Converts population surplus (above `initial_pop` floor) into military at mineral cost. Stochastic rounding matches the rest of the codebase. Scorer favors recruit when enemy military exceeds own; capped at +0.6 modifier.
-- **Civilization relations:** `model.relations: dict[tuple[int,int], float]` indexed by `(min_id, max_id)` — always symmetric. Updated by trade (+0.05), attack (−0.3), and city capture (−0.5). Decays 0.002/tick toward neutral. Blocks trade feasibility when `rel < −0.5`. Shown in LLM prompts so providers can reason diplomatically.
+- **Civilization relations:** `model.relations: dict[tuple[int,int], float]` indexed by `(min_id, max_id)` — always symmetric. Updated by trade (+0.05), attack (−0.3), and city capture (−0.5). Decays 0.002/tick toward neutral. Blocks trade feasibility when `rel < −0.5`. Shown in council intel report (`| relations {rel:+.2f}` per enemy) so LLMs can reason about alliances and trade viability.
+- **Council P2 awareness (council_prompts.py):** The council state snapshot and schemas expose all P2 mechanics. `build_civ_state_snapshot()` includes `Avg fortification: N` in the own-block and `| relations {rel:+.2f}` per enemy in the intel report. War minister `MINISTER_SPECS` lists `["attack", "fortify", "recruit"]`. `CHIEF_SCHEMA_DICT`, `CHIEF_SCHEMA`, `CHIEF_LITE_SCHEMA_DICT`, and `CHIEF_LITE_SCHEMA` all require all 7 action keys including `"recruit"`.
 - **Trade surplus modifier** uses `food_stock` (not grid tile level) to correctly detect surplus.
 - **Fortify modifier** scales proportionally with enemy/self military ratio — not a flat bonus.
 - **Expand modifier** is capped at 0.5 so it doesn't permanently dominate other actions.
