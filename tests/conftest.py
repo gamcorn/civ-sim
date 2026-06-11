@@ -91,6 +91,11 @@ def make_mock_city(
     model.config.initial_pop = 50
     model.config.recruit_pop_cost = 10
     model.config.recruit_mineral_cost = 3.0
+    model.config.cultivate_wood_cost    = 3.0
+    model.config.cultivate_mineral_cost = 2.0
+    model.config.mine_mineral_cost      = 3.0
+    model.config.woodcut_wood_cost      = 2.0
+    model.config.labor_ratio_delta      = 0.05
     model.config.relation_decay = 0.002
     model.config.trade_relation_bonus = 0.05
     model.config.attack_relation_penalty = 0.3

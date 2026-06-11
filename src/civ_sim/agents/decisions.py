@@ -170,11 +170,15 @@ def _feasible(agent: "CityAgent", scores: dict[str, float]) -> dict[str, float]:
     if agent.population > min_pop and agent.mineral_stock >= cfg.recruit_mineral_cost:
         feasible[RECRUIT] = scores[RECRUIT]
 
-    if CULTIVATE in agent.civ.unlocked_actions:
+    if (CULTIVATE in agent.civ.unlocked_actions
+            and agent.wood_stock >= cfg.cultivate_wood_cost
+            and agent.mineral_stock >= cfg.cultivate_mineral_cost):
         feasible[CULTIVATE] = scores[CULTIVATE]
-    if MINE in agent.civ.unlocked_actions:
+    if (MINE in agent.civ.unlocked_actions
+            and agent.mineral_stock >= cfg.mine_mineral_cost):
         feasible[MINE] = scores[MINE]
-    if WOODCUT in agent.civ.unlocked_actions:
+    if (WOODCUT in agent.civ.unlocked_actions
+            and agent.wood_stock >= cfg.woodcut_wood_cost):
         feasible[WOODCUT] = scores[WOODCUT]
 
     return feasible

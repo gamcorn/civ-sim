@@ -251,28 +251,39 @@ def test_labor_production_scales_with_population(mini_model):
     assert food_large_pop > food_small_pop * 1.5
 
 
-def test_epidemic_reduces_labor_output(mini_model):
+def test_do_cultivate_decrements_stocks_and_shifts_ratio(mini_model):
     city = _get_city(mini_model)
     city.civ.discovered_techs.add("agriculture")
     city.civ.unlocked_actions.add("cultivate")
-    city.civ.land_productivity = 1.0
-    mini_model.grid.ownership[:] = city.civ.civ_id
-    mini_model.grid.soil_fertility[:] = 80.0
+    city.wood_stock = 20.0
+    city.mineral_stock = 20.0
+    city.farmer_ratio = 0.0
+    city._do_cultivate()
+    assert city.wood_stock < 20.0
+    assert city.mineral_stock < 20.0
+    assert city.farmer_ratio > 0.0
 
-    city.farmer_ratio = 0.5
-    city.military = 0
-    city.population = 200
-    city.food_stock = 0.0
-    city._produce_labor()
-    food_healthy = city.food_stock
 
-    city.population = 100
-    city.food_stock = 0.0
-    mini_model.grid.soil_fertility[:] = 80.0
-    city._produce_labor()
-    food_epidemic = city.food_stock
+def test_do_mine_decrements_minerals_and_shifts_ratio(mini_model):
+    city = _get_city(mini_model)
+    city.civ.discovered_techs.add("mining")
+    city.civ.unlocked_actions.add("mine")
+    city.mineral_stock = 20.0
+    city.miner_ratio = 0.0
+    city._do_mine()
+    assert city.mineral_stock < 20.0
+    assert city.miner_ratio > 0.0
 
-    assert food_epidemic < food_healthy
+
+def test_do_woodcut_decrements_wood_and_shifts_ratio(mini_model):
+    city = _get_city(mini_model)
+    city.civ.discovered_techs.add("forestry")
+    city.civ.unlocked_actions.add("woodcut")
+    city.wood_stock = 20.0
+    city.woodcutter_ratio = 0.0
+    city._do_woodcut()
+    assert city.wood_stock < 20.0
+    assert city.woodcutter_ratio > 0.0
 
 
 def test_produce_labor_no_output_without_tech(mini_model):
