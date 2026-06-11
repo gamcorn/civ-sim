@@ -3,6 +3,7 @@
 Works over SSH and in headless environments. Redraws state in-place each tick
 using cursor positioning to minimise flicker.
 """
+
 from __future__ import annotations
 
 import os
@@ -16,18 +17,18 @@ if TYPE_CHECKING:
     from civ_sim.simulation.model import CivModel
 
 # ANSI helpers
-_RESET  = "\033[0m"
-_BOLD   = "\033[1m"
-_DIM    = "\033[2m"
+_RESET = "\033[0m"
+_BOLD = "\033[1m"
+_DIM = "\033[2m"
 
-_FG    = {-1: "\033[32m",  0: "\033[34m",  1: "\033[31m"}   # green / blue / red
-_BRITE = {-1: "\033[92m",  0: "\033[94m",  1: "\033[91m"}   # bright variants
-_ORANGE = "\033[33m"   # famine indicator
-_YELLOW = "\033[93m"   # disease indicator
-_GREY   = "\033[37m"   # minerals
+_FG = {-1: "\033[32m", 0: "\033[34m", 1: "\033[31m"}  # green / blue / red
+_BRITE = {-1: "\033[92m", 0: "\033[94m", 1: "\033[91m"}  # bright variants
+_ORANGE = "\033[33m"  # famine indicator
+_YELLOW = "\033[93m"  # disease indicator
+_GREY = "\033[37m"  # minerals
 
 _GRADIENT = ("·", "░", "▒", "▓", "█")
-_SPARK    = "▁▂▃▄▅▆▇█"
+_SPARK = "▁▂▃▄▅▆▇█"
 
 
 def _tile_char(food: float, max_food: float) -> str:
@@ -78,9 +79,9 @@ class TerminalRenderer:
         map_rows = max(6, term_rows - reserved)
         map_cols = min(term_cols - 2, model.config.width)
 
-        self.scale_x = max(1, model.config.width  // map_cols)
+        self.scale_x = max(1, model.config.width // map_cols)
         self.scale_y = max(1, model.config.height // map_rows)
-        self.map_cols = model.config.width  // self.scale_x
+        self.map_cols = model.config.width // self.scale_x
         self.map_rows = model.config.height // self.scale_y
 
         sys.stdout.write("\033[2J\033[H")
@@ -108,30 +109,34 @@ class TerminalRenderer:
 
         for civ in model.civilizations:
             cities = [
-                a for a in model.agents
+                a
+                for a in model.agents
                 if hasattr(a, "civ") and a.civ.civ_id == civ.civ_id
             ]
-            total_pop   = sum(c.population for c in cities)
-            total_mil   = sum(c.military   for c in cities)
-            total_food  = sum(c.food_stock for c in cities)
-            total_wood  = sum(getattr(c, "wood_stock", 0.0) for c in cities)
-            total_min   = sum(getattr(c, "mineral_stock", 0.0) for c in cities)
-            territory   = model.grid.territory_count(civ.civ_id)
-            techs       = len(civ.discovered_techs)
-            n_cities    = len(cities)
+            total_pop = sum(c.population for c in cities)
+            total_mil = sum(c.military for c in cities)
+            total_food = sum(c.food_stock for c in cities)
+            total_wood = sum(getattr(c, "wood_stock", 0.0) for c in cities)
+            total_min = sum(getattr(c, "mineral_stock", 0.0) for c in cities)
+            territory = model.grid.territory_count(civ.civ_id)
+            techs = len(civ.discovered_techs)
+            n_cities = len(cities)
 
-            has_disease      = any(getattr(c, "_disease_hit_ticks", 0) > 0 for c in cities)
-            has_famine       = any(c.food_stock < 0.1 and c.population > 0 for c in cities)
-            has_wood_short   = any(getattr(c, "wood_stock", 1.0) < 1.0 and c.population > 0 for c in cities)
-            has_min_short    = any(getattr(c, "mineral_stock", 1.0) < 1.0 for c in cities)
+            has_disease = any(getattr(c, "_disease_hit_ticks", 0) > 0 for c in cities)
+            has_famine = any(c.food_stock < 0.1 and c.population > 0 for c in cities)
+            has_wood_short = any(
+                getattr(c, "wood_stock", 1.0) < 1.0 and c.population > 0 for c in cities
+            )
+            has_min_short = any(getattr(c, "mineral_stock", 1.0) < 1.0 for c in cities)
 
             action_counts = Counter(c.last_action for c in cities if c.last_action)
-            top_actions   = "  ".join(
-                f"{act}×{cnt}" for act, cnt in action_counts.most_common(3)
-            ) or "—"
+            top_actions = (
+                "  ".join(f"{act}×{cnt}" for act, cnt in action_counts.most_common(3))
+                or "—"
+            )
 
-            color  = _FG[civ.civ_id]
-            tags   = "" if civ.alive else f"  {_DIM}(extinct){_RESET}"
+            color = _FG[civ.civ_id]
+            tags = "" if civ.alive else f"  {_DIM}(extinct){_RESET}"
             if has_disease:
                 tags += f"  {_YELLOW}⚕disease{_RESET}"
             if has_famine:
@@ -159,9 +164,10 @@ class TerminalRenderer:
 
         # ── Map ───────────────────────────────────────────────────────────
         from civ_sim.world.resources import ResourceType
+
         ownership = np.array(model.grid.ownership)
-        food      = np.asarray(model.grid.layers[ResourceType.FOOD].data)
-        max_r     = float(model.config.resource_max)
+        food = np.asarray(model.grid.layers[ResourceType.FOOD].data)
+        max_r = float(model.config.resource_max)
 
         # (civ_id, population, is_disease, is_famine)
         city_at: dict[tuple[int, int], tuple[int, float, bool, bool]] = {}
@@ -177,8 +183,10 @@ class TerminalRenderer:
         for row in range(self.map_rows):
             chars: list[str] = []
             for col in range(self.map_cols):
-                gx = min(col * self.scale_x + self.scale_x // 2, model.config.width  - 1)
-                gy = min(row * self.scale_y + self.scale_y // 2, model.config.height - 1)
+                gx = min(col * self.scale_x + self.scale_x // 2, model.config.width - 1)
+                gy = min(
+                    row * self.scale_y + self.scale_y // 2, model.config.height - 1
+                )
 
                 city_info: tuple[int, float, bool, bool] | None = None
                 for dy in range(self.scale_y):
@@ -203,7 +211,9 @@ class TerminalRenderer:
                         c = _BRITE[city_civ]
                     chars.append(f"{c}{_BOLD}{glyph}{_RESET}")
                 else:
-                    chars.append(f"{_FG[owner]}{_tile_char(food[gx, gy], max_r)}{_RESET}")
+                    chars.append(
+                        f"{_FG[owner]}{_tile_char(food[gx, gy], max_r)}{_RESET}"
+                    )
 
             lines.append("".join(chars))
 
@@ -233,17 +243,17 @@ class TerminalRenderer:
             )
             for i, civ in enumerate(model.civilizations):
                 color = _FG[civ.civ_id]
-                pop_h  = h.get(f"pop_{i}",      [])
-                mil_h  = h.get(f"mil_{i}",      [])
-                cit_h  = h.get(f"cities_{i}",   [])
+                pop_h = h.get(f"pop_{i}", [])
+                mil_h = h.get(f"mil_{i}", [])
+                cit_h = h.get(f"cities_{i}", [])
                 food_h = h.get(f"food_civ_{i}", [])
-                sp_pop  = _sparkline(pop_h)
-                sp_mil  = _sparkline(mil_h)
-                sp_cit  = _sparkline(cit_h, width=12)
+                sp_pop = _sparkline(pop_h)
+                sp_mil = _sparkline(mil_h)
+                sp_cit = _sparkline(cit_h, width=12)
                 sp_food = _sparkline(food_h)
-                cur_pop  = pop_h[-1]  if pop_h  else 0
-                cur_mil  = mil_h[-1]  if mil_h  else 0
-                cur_cit  = cit_h[-1]  if cit_h  else 0
+                cur_pop = pop_h[-1] if pop_h else 0
+                cur_mil = mil_h[-1] if mil_h else 0
+                cur_cit = cit_h[-1] if cit_h else 0
                 cur_food = food_h[-1] if food_h else 0
                 lines.append(
                     f"  {color}{civ.name[:8]:<8}{_RESET}"
@@ -257,13 +267,13 @@ class TerminalRenderer:
             lines.append("")
             lines.append(f"{_DIM}  Grid resource totals{_RESET}")
             for key, label, rc in [
-                ("food_total",     "food    ", "\033[32m"),
+                ("food_total", "food    ", "\033[32m"),
                 ("minerals_total", "minerals", _GREY),
-                ("wood_total",     "wood    ", _ORANGE),
+                ("wood_total", "wood    ", _ORANGE),
             ]:
                 vals = h.get(key, [])
-                sp   = _sparkline(vals)
-                cur  = vals[-1] if vals else 0
+                sp = _sparkline(vals)
+                cur = vals[-1] if vals else 0
                 lines.append(f"  {rc}{label}{_RESET}  {rc}{sp}{_RESET}  {cur:>9.0f}")
 
         # ── Epidemic events ────────────────────────────────────────────────
@@ -273,9 +283,9 @@ class TerminalRenderer:
             lines.append(f"{_DIM}  Epidemic events  (β = transmission rate){_RESET}")
             for tick, beta, deaths in epi[-5:]:
                 if beta < 1.0:
-                    sev, sc = "mild",         _DIM
+                    sev, sc = "mild", _DIM
                 elif beta < 2.0:
-                    sev, sc = "severe",       _YELLOW
+                    sev, sc = "severe", _YELLOW
                 else:
                     sev, sc = "catastrophic", "\033[91m"
                 lines.append(

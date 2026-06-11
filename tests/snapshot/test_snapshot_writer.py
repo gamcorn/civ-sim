@@ -1,9 +1,12 @@
-import tempfile, os
-import numpy as np
-import duckdb
+import os
+import tempfile
 from unittest.mock import MagicMock
-from civ_sim.world.resources import ResourceType
+
+import duckdb
+import numpy as np
+
 from civ_sim.storage.snapshot import SnapshotWriter
+from civ_sim.world.resources import ResourceType
 
 
 def _make_mock_grid(width=8, height=6):
@@ -21,6 +24,7 @@ def _make_mock_grid(width=8, height=6):
 
 def _make_mock_city(civ_id=0, x=2, y=3):
     from civ_sim.agents.city import CityAgent
+
     city = MagicMock(spec=CityAgent)
     city.unique_id = f"city-{civ_id}-{x}-{y}"
     civ = MagicMock()
@@ -97,9 +101,10 @@ def test_writer_multiple_rows():
         writer.close()
 
         con = duckdb.connect(db_path)
-        ticks = [r[0] for r in con.execute(
-            "SELECT tick FROM snapshots ORDER BY tick"
-        ).fetchall()]
+        ticks = [
+            r[0]
+            for r in con.execute("SELECT tick FROM snapshots ORDER BY tick").fetchall()
+        ]
         con.close()
         assert ticks == [10, 20, 30]
     finally:
@@ -114,7 +119,7 @@ def test_writer_serialises_ownership_blob():
         os.unlink(db_path)
         writer = SnapshotWriter(db_path, seed=2)
         grid = _make_mock_grid()
-        grid.ownership[0, 0] = 1   # mark one tile as civ 1
+        grid.ownership[0, 0] = 1  # mark one tile as civ 1
         writer.write(tick=1, grid=grid, agents=[], civilizations=[])
         writer.close()
 

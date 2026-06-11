@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import bisect
 import json
 from dataclasses import dataclass
@@ -72,10 +73,10 @@ class ReplayFrame:
     steps: int
     running: bool
     civilizations: list  # list[CivState]
-    agents: list         # list[CityState]
+    agents: list  # list[CityState]
     grid: GridState
-    config: SimpleNamespace   # .width .height .resource_max
-    history: dict             # {"tick", "pop_0", "pop_1", "mil_0", "mil_1"}
+    config: SimpleNamespace  # .width .height .resource_max
+    history: dict  # {"tick", "pop_0", "pop_1", "mil_0", "mil_1"}
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +103,8 @@ class SnapshotWriter:
             {
                 "agent_id": str(a.unique_id),
                 "civ_id": a.civ.civ_id,
-                "x": a.x, "y": a.y,
+                "x": a.x,
+                "y": a.y,
                 "pop": float(a.population),
                 "military": float(a.military),
                 "food_stock": float(a.food_stock),
@@ -127,11 +129,15 @@ class SnapshotWriter:
         self._con.execute(
             "INSERT INTO snapshots VALUES (?,?,?,?,?,?,?,?,?)",
             (
-                tick, self._seed,
-                ownership.tobytes(), food.tobytes(),
-                int(ownership.shape[0]), int(ownership.shape[1]),
+                tick,
+                self._seed,
+                ownership.tobytes(),
+                food.tobytes(),
+                int(ownership.shape[0]),
+                int(ownership.shape[1]),
                 float(grid.config.resource_max),
-                json.dumps(cities_data), json.dumps(civs_data),
+                json.dumps(cities_data),
+                json.dumps(civs_data),
             ),
         )
 
@@ -153,9 +159,12 @@ class SnapshotReader:
 
     def ticks(self) -> list[int]:
         try:
-            return [r[0] for r in self._con.execute(
-                "SELECT tick FROM snapshots ORDER BY tick"
-            ).fetchall()]
+            return [
+                r[0]
+                for r in self._con.execute(
+                    "SELECT tick FROM snapshots ORDER BY tick"
+                ).fetchall()
+            ]
         except duckdb.CatalogException:
             return []
 
@@ -190,7 +199,8 @@ class SnapshotReader:
 
         city_states = [
             CityState(
-                x=city["x"], y=city["y"],
+                x=city["x"],
+                y=city["y"],
                 population=city["pop"],
                 military=city["military"],
                 food_stock=city["food_stock"],

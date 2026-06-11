@@ -4,6 +4,7 @@ Usage:
     python replay.py results.duckdb
     python replay.py results.duckdb --renderer terminal --from-tick 500 --speed 4
 """
+
 from __future__ import annotations
 
 import argparse
@@ -49,8 +50,9 @@ def _apply_key(key: str, state: dict, n_ticks: int) -> None:
 
 def _read_keys_raw(key_q: queue.Queue) -> None:
     """Read raw stdin bytes and push decoded key names into key_q."""
-    import tty
     import termios
+    import tty
+
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
     try:
@@ -90,8 +92,9 @@ def _read_keys_raw(key_q: queue.Queue) -> None:
 
 
 def replay_terminal(reader, from_tick: int, speed: float) -> None:
-    from civ_sim.visualization.terminal_renderer import TerminalRenderer
     import termios
+
+    from civ_sim.visualization.terminal_renderer import TerminalRenderer
 
     ticks = reader.ticks()
     if not ticks:
@@ -117,6 +120,7 @@ def replay_terminal(reader, from_tick: int, speed: float) -> None:
 
     key_q: queue.Queue = queue.Queue()
     import threading
+
     t = threading.Thread(target=_read_keys_raw, args=(key_q,), daemon=True)
     t.start()
 
@@ -155,7 +159,10 @@ def replay_terminal(reader, from_tick: int, speed: float) -> None:
 try:
     import matplotlib.pyplot as plt
     from matplotlib.animation import FuncAnimation
+    from matplotlib.artist import Artist
+
     from civ_sim.visualization.renderer import Renderer
+
     _MPL_AVAILABLE = True
 except Exception:
     _MPL_AVAILABLE = False
@@ -188,8 +195,13 @@ def replay_matplotlib(reader, from_tick: int, speed: float) -> None:
 
     def _on_key(event) -> None:
         key_map = {
-            " ": "space", "+": "+", "=": "+", "-": "-",
-            "right": "right", "left": "left", "q": "q",
+            " ": "space",
+            "+": "+",
+            "=": "+",
+            "-": "-",
+            "right": "right",
+            "left": "left",
+            "q": "q",
         }
         k = key_map.get(event.key)
         if k:
@@ -199,19 +211,22 @@ def replay_matplotlib(reader, from_tick: int, speed: float) -> None:
 
     renderer.fig.canvas.mpl_connect("key_press_event", _on_key)
 
-    def _animate(_frame_num) -> None:
+    def _animate(_frame_num) -> list[Artist]:
         if state["quit"] or state["paused"]:
-            return
+            return []
         frame = reader.load(ticks[state["idx"]])
         renderer.update(frame)
         state["idx"] = min(len(ticks) - 1, state["idx"] + 1)
         if state["idx"] == len(ticks) - 1:
             state["paused"] = True
+        return []
 
     interval_ms = int(1000.0 / max(state["speed"], 0.125))
     _anim = FuncAnimation(
-        renderer.fig, _animate,
-        interval=interval_ms, cache_frame_data=False,
+        renderer.fig,
+        _animate,
+        interval=interval_ms,
+        cache_frame_data=False,
     )
 
     plt.show(block=True)
@@ -225,20 +240,32 @@ def replay_matplotlib(reader, from_tick: int, speed: float) -> None:
 def main() -> None:
     p = argparse.ArgumentParser(description="Replay a civ-sim DuckDB snapshot")
     p.add_argument("db_path", help="Path to .duckdb file with snapshots table")
-    p.add_argument("--renderer", choices=["terminal", "matplotlib", "auto"],
-                   default="auto")
-    p.add_argument("--from-tick", type=int, default=0,
-                   metavar="N", help="Start near this tick (default: beginning)")
-    p.add_argument("--speed", type=float, default=1.0,
-                   help="Playback speed in frames/sec (default: 1.0)")
+    p.add_argument(
+        "--renderer", choices=["terminal", "matplotlib", "auto"], default="auto"
+    )
+    p.add_argument(
+        "--from-tick",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Start near this tick (default: beginning)",
+    )
+    p.add_argument(
+        "--speed",
+        type=float,
+        default=1.0,
+        help="Playback speed in frames/sec (default: 1.0)",
+    )
     args = p.parse_args()
 
     from civ_sim.storage.snapshot import SnapshotReader
+
     reader = SnapshotReader(args.db_path)
 
     renderer = args.renderer
     if renderer == "auto":
         import os
+
         renderer = "matplotlib" if os.environ.get("DISPLAY") else "terminal"
 
     try:

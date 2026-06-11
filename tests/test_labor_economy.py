@@ -1,10 +1,29 @@
 """Tests for the labor economy: soil layers, degradation, production."""
-import numpy as np
-import pytest
+
 import random as rnd
 
+import numpy as np
+import pytest
+
+from civ_sim.agents.city import CityAgent
+from civ_sim.agents.civilization import Civilization, CulturalTraits
+from civ_sim.agents.decisions import (
+    CULTIVATE,
+    GATHER,
+    MINE,
+    WOODCUT,
+    get_feasible_actions,
+)
+from civ_sim.agents.providers.council_prompts import (
+    CHIEF_LITE_SCHEMA_DICT,
+    CHIEF_SCHEMA_DICT,
+    MINISTER_SPECS,
+    build_civ_state_snapshot,
+)
 from civ_sim.config import SimConfig
+from civ_sim.technology.discovery import TECH_COSTS, TECH_TREE
 from civ_sim.world.grid import ResourceGrid
+from tests.conftest import make_mock_city
 
 
 @pytest.fixture
@@ -37,9 +56,12 @@ def test_soil_arrays_shape(grid):
 
 def test_soil_arrays_in_range(grid):
     for arr in (
-        grid.base_soil_fertility, grid.soil_fertility,
-        grid.base_mineral_richness, grid.mineral_richness,
-        grid.base_forest_density, grid.forest_density,
+        grid.base_soil_fertility,
+        grid.soil_fertility,
+        grid.base_mineral_richness,
+        grid.mineral_richness,
+        grid.base_forest_density,
+        grid.forest_density,
     ):
         assert float(arr.min()) >= 0.0
         assert float(arr.max()) <= 100.0
@@ -107,9 +129,6 @@ def test_soil_does_not_degrade_below_zero(grid, cfg):
     assert float(grid.forest_density[10, 10]) >= 0.0
 
 
-from civ_sim.agents.civilization import Civilization, CulturalTraits
-
-
 def _make_civ():
     return Civilization(0, "Alpha", CulturalTraits())
 
@@ -129,10 +148,6 @@ def test_civ_labor_defaults():
     assert civ.forestry_efficiency == 0.5
     assert isinstance(civ.unlocked_actions, set)
     assert len(civ.unlocked_actions) == 0
-
-
-from civ_sim.technology.discovery import TECH_TREE, TECH_COSTS, TECH_EFFECTS, TechEngine
-from civ_sim.agents.city import CityAgent
 
 
 def _get_city(mini_model):
@@ -323,13 +338,6 @@ def test_soil_degrades_after_produce_labor(mini_model):
     assert float(mini_model.grid.soil_fertility[city.x, city.y]) < initial
 
 
-from civ_sim.agents.decisions import (
-    CULTIVATE, MINE, WOODCUT, GATHER,
-    get_feasible_actions,
-)
-from tests.conftest import make_mock_city
-
-
 def test_cultivate_not_feasible_before_agriculture():
     city = make_mock_city(techs=[], wood_stock=50.0, mineral_stock=50.0)
     city.civ.unlocked_actions = set()
@@ -377,14 +385,6 @@ def test_gather_still_feasible_after_agriculture():
     city.civ.unlocked_actions = {"cultivate"}
     feasible = get_feasible_actions(city)
     assert GATHER in feasible
-
-
-from civ_sim.agents.providers.council_prompts import (
-    build_civ_state_snapshot,
-    CHIEF_SCHEMA_DICT,
-    CHIEF_LITE_SCHEMA_DICT,
-    MINISTER_SPECS,
-)
 
 
 def test_state_snapshot_includes_labor_block(mini_model):

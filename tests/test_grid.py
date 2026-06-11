@@ -1,5 +1,5 @@
-import numpy as np
 import pytest
+
 from civ_sim.config import SimConfig
 from civ_sim.world.grid import ResourceGrid
 from civ_sim.world.resources import ResourceType
@@ -7,10 +7,18 @@ from civ_sim.world.resources import ResourceType
 
 @pytest.fixture
 def grid():
-    cfg = SimConfig(width=20, height=20, resource_max=100.0,
-                    food_regen=0.04, water_regen=0.02,
-                    wood_regen=0.015, mineral_regen=0.0, rng_seed=1)
+    cfg = SimConfig(
+        width=20,
+        height=20,
+        resource_max=100.0,
+        food_regen=0.04,
+        water_regen=0.02,
+        wood_regen=0.015,
+        mineral_regen=0.0,
+        rng_seed=1,
+    )
     import random as stdlib_random
+
     rng = stdlib_random.Random(1)
     return ResourceGrid(20, 20, cfg, rng)
 

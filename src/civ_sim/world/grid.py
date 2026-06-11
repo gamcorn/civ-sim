@@ -4,7 +4,7 @@ import numpy as np
 import opensimplex
 from mesa.discrete_space import OrthogonalMooreGrid, PropertyLayer
 
-from .resources import ResourceType, NOISE_SCALE
+from .resources import NOISE_SCALE, ResourceType
 
 
 def _load_backend(name: str):
@@ -17,16 +17,15 @@ def _load_backend(name: str):
         return np
     if name == "cupy":
         try:
-            import cupy
+            import cupy  # ty: ignore[unresolved-import]
+
             return cupy
         except ImportError as exc:
             raise ImportError(
                 "CuPy is not installed. Install it for your CUDA version: "
                 "pip install cupy-cuda12x"
             ) from exc
-    raise ValueError(
-        f"Unknown grid_backend {name!r}. Choose 'numpy' or 'cupy'."
-    )
+    raise ValueError(f"Unknown grid_backend {name!r}. Choose 'numpy' or 'cupy'.")
 
 
 class ResourceGrid:
@@ -64,12 +63,12 @@ class ResourceGrid:
         # reproducibility of all downstream RNG-dependent code).
         soil_seed = getattr(config, "rng_seed", 0) ^ 0xDEADBEEF
         soil_rng = _random_module.Random(soil_seed)
-        self.base_soil_fertility   = self._perlin_map_raw(0.05, soil_rng)
-        self.soil_fertility        = self.base_soil_fertility.copy()
+        self.base_soil_fertility = self._perlin_map_raw(0.05, soil_rng)
+        self.soil_fertility = self.base_soil_fertility.copy()
         self.base_mineral_richness = self._perlin_map_raw(0.09, soil_rng)
-        self.mineral_richness      = self.base_mineral_richness.copy()
-        self.base_forest_density   = self._perlin_map_raw(0.04, soil_rng)
-        self.forest_density        = self.base_forest_density.copy()
+        self.mineral_richness = self.base_mineral_richness.copy()
+        self.base_forest_density = self._perlin_map_raw(0.04, soil_rng)
+        self.forest_density = self.base_forest_density.copy()
 
     def _perlin_map(self, rt: ResourceType, random) -> np.ndarray:
         # Always generate on CPU with numpy (opensimplex is CPU-only)
@@ -91,9 +90,9 @@ class ResourceGrid:
 
     def step(self, food_regen_mult: float = 1.0):
         regen_map = {
-            ResourceType.FOOD:     self.config.food_regen * food_regen_mult,
-            ResourceType.WATER:    self.config.water_regen,
-            ResourceType.WOOD:     self.config.wood_regen,
+            ResourceType.FOOD: self.config.food_regen * food_regen_mult,
+            ResourceType.WATER: self.config.water_regen,
+            ResourceType.WOOD: self.config.wood_regen,
             ResourceType.MINERALS: self.config.mineral_regen,
         }
         for rt, rate in regen_map.items():
@@ -157,8 +156,13 @@ class ResourceGrid:
 
     def apply_labor_degradation(
         self,
-        cx: int, cy: int, radius: int, civ_id: int,
-        farmer_ratio: float, miner_ratio: float, woodcutter_ratio: float,
+        cx: int,
+        cy: int,
+        radius: int,
+        civ_id: int,
+        farmer_ratio: float,
+        miner_ratio: float,
+        woodcutter_ratio: float,
         config,
     ) -> None:
         dr = config.degradation_rate
@@ -182,11 +186,14 @@ class ResourceGrid:
                         )
                         # Fallow recovery toward base
                         self.soil_fertility[nx, ny] += rr * (
-                            float(self.base_soil_fertility[nx, ny]) - float(self.soil_fertility[nx, ny])
+                            float(self.base_soil_fertility[nx, ny])
+                            - float(self.soil_fertility[nx, ny])
                         )
                         self.mineral_richness[nx, ny] += rr * (
-                            float(self.base_mineral_richness[nx, ny]) - float(self.mineral_richness[nx, ny])
+                            float(self.base_mineral_richness[nx, ny])
+                            - float(self.mineral_richness[nx, ny])
                         )
                         self.forest_density[nx, ny] += rr * (
-                            float(self.base_forest_density[nx, ny]) - float(self.forest_density[nx, ny])
+                            float(self.base_forest_density[nx, ny])
+                            - float(self.forest_density[nx, ny])
                         )

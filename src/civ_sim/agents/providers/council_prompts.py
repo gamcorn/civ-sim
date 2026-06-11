@@ -1,11 +1,12 @@
 # agents/providers/council_prompts.py
 from __future__ import annotations
+
 import json
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from civ_sim.agents.civilization import Civilization, CulturalTraits
     from civ_sim.agents.city import CityAgent
+    from civ_sim.agents.civilization import Civilization, CulturalTraits
     from civ_sim.simulation.model import CivModel
 
 
@@ -36,6 +37,7 @@ MINISTER_SPECS: list[dict] = [
     },
 ]
 
+
 def build_sector_schema_dict(spec: dict) -> dict:
     """Per-spec guided_json schema that requires the spec's specific action keys."""
     return {
@@ -50,18 +52,26 @@ def build_sector_schema_dict(spec: dict) -> dict:
             },
             "disagreement_level": {"type": "number"},
         },
-        "required": ["analysis", "recommendation", "weight_requests", "disagreement_level"],
+        "required": [
+            "analysis",
+            "recommendation",
+            "weight_requests",
+            "disagreement_level",
+        ],
     }
 
 
 def build_sector_schema_str(spec: dict) -> str:
     """Human-readable schema example showing actual action names for this spec."""
-    return json.dumps({
-        "analysis": "brief situation assessment",
-        "recommendation": spec["actions"][0],
-        "weight_requests": {a: 0.5 for a in spec["actions"]},
-        "disagreement_level": 0.3,
-    }, indent=2)
+    return json.dumps(
+        {
+            "analysis": "brief situation assessment",
+            "recommendation": spec["actions"][0],
+            "weight_requests": {a: 0.5 for a in spec["actions"]},
+            "disagreement_level": 0.3,
+        },
+        indent=2,
+    )
 
 
 # Kept for backwards compat / non-spec-specific uses
@@ -70,37 +80,57 @@ SECTOR_SCHEMA_DICT = {
     "properties": {
         "analysis": {"type": "string"},
         "recommendation": {"type": "string"},
-        "weight_requests": {"type": "object", "additionalProperties": {"type": "number"}},
+        "weight_requests": {
+            "type": "object",
+            "additionalProperties": {"type": "number"},
+        },
         "disagreement_level": {"type": "number"},
     },
     "required": ["analysis", "recommendation", "weight_requests", "disagreement_level"],
 }
-SECTOR_SCHEMA = json.dumps({
-    "analysis": "brief situation assessment",
-    "recommendation": "one action verb",
-    "weight_requests": {"gather": 0.5},
-    "disagreement_level": 0.3,
-}, indent=2)
+SECTOR_SCHEMA = json.dumps(
+    {
+        "analysis": "brief situation assessment",
+        "recommendation": "one action verb",
+        "weight_requests": {"gather": 0.5},
+        "disagreement_level": 0.3,
+    },
+    indent=2,
+)
 
 BUDGET_SCHEMA_DICT = {
     "type": "object",
     "properties": {
         "veto": {"type": "boolean"},
         "veto_reason": {"type": ["string", "null"]},
-        "approved_weights": {"type": "object", "additionalProperties": {"type": "number"}},
+        "approved_weights": {
+            "type": "object",
+            "additionalProperties": {"type": "number"},
+        },
     },
     "required": ["veto", "veto_reason", "approved_weights"],
 }
-BUDGET_SCHEMA = json.dumps({
-    "veto": False,
-    "veto_reason": None,
-    "approved_weights": {"action_name": 0.5},
-}, indent=2)
+BUDGET_SCHEMA = json.dumps(
+    {
+        "veto": False,
+        "veto_reason": None,
+        "approved_weights": {"action_name": 0.5},
+    },
+    indent=2,
+)
 
 # veto_overridden removed — simplifies output for smaller models
 _ALL_ACTIONS = [
-    "gather", "trade", "expand", "fortify", "attack",
-    "research", "recruit", "cultivate", "mine", "woodcut",
+    "gather",
+    "trade",
+    "expand",
+    "fortify",
+    "attack",
+    "research",
+    "recruit",
+    "cultivate",
+    "mine",
+    "woodcut",
 ]
 
 CHIEF_SCHEMA_DICT = {
@@ -116,11 +146,14 @@ CHIEF_SCHEMA_DICT = {
     },
     "required": ["era_goal", "action_weights", "reasoning"],
 }
-CHIEF_SCHEMA = json.dumps({
-    "era_goal": "one sentence strategy",
-    "action_weights": {a: 0.0 for a in _ALL_ACTIONS},
-    "reasoning": "brief synthesis",
-}, indent=2)
+CHIEF_SCHEMA = json.dumps(
+    {
+        "era_goal": "one sentence strategy",
+        "action_weights": {a: 0.0 for a in _ALL_ACTIONS},
+        "reasoning": "brief synthesis",
+    },
+    indent=2,
+)
 
 # Lite-mode chief schema (council_off): action_weights only
 CHIEF_LITE_SCHEMA_DICT = {
@@ -134,9 +167,12 @@ CHIEF_LITE_SCHEMA_DICT = {
     },
     "required": ["action_weights"],
 }
-CHIEF_LITE_SCHEMA = json.dumps({
-    "action_weights": {a: 0.0 for a in _ALL_ACTIONS},
-}, indent=2)
+CHIEF_LITE_SCHEMA = json.dumps(
+    {
+        "action_weights": {a: 0.0 for a in _ALL_ACTIONS},
+    },
+    indent=2,
+)
 
 
 _JSON_ONLY = (
@@ -147,7 +183,11 @@ _JSON_ONLY = (
 
 def build_sector_persona(spec: dict, traits: "CulturalTraits") -> str:
     trait_val = getattr(traits, spec["trait_key"])
-    intensity = "strongly" if trait_val > 0.7 else "moderately" if trait_val > 0.4 else "cautiously"
+    intensity = (
+        "strongly"
+        if trait_val > 0.7
+        else "moderately" if trait_val > 0.4 else "cautiously"
+    )
     return (
         f"You are the {spec['name']} of a civilization. "
         f"Your domain is {spec['domain']}. "
@@ -166,7 +206,11 @@ def build_budget_persona(traits: "CulturalTraits") -> str:
 
 
 def build_chief_persona(traits: "CulturalTraits") -> str:
-    boldness = "bold and decisive" if traits.risk_tolerance > 0.6 else "cautious and deliberate"
+    boldness = (
+        "bold and decisive"
+        if traits.risk_tolerance > 0.6
+        else "cautious and deliberate"
+    )
     return (
         f"You are the Chief of Staff. You are {boldness}. "
         "You synthesize all minister positions into a single strategic directive. "
@@ -176,7 +220,11 @@ def build_chief_persona(traits: "CulturalTraits") -> str:
 
 
 def build_chief_lite_persona(traits: "CulturalTraits") -> str:
-    boldness = "bold and decisive" if traits.risk_tolerance > 0.6 else "cautious and deliberate"
+    boldness = (
+        "bold and decisive"
+        if traits.risk_tolerance > 0.6
+        else "cautious and deliberate"
+    )
     return (
         f"You are a {boldness} strategic commander. "
         "Assign action_weights (floats in [-1.0, 1.0]) to guide your civilization. "
@@ -185,29 +233,36 @@ def build_chief_lite_persona(traits: "CulturalTraits") -> str:
 
 
 def build_civ_state_snapshot(
-    civ: "Civilization", cities: list["CityAgent"], model: "CivModel",
+    civ: "Civilization",
+    cities: list["CityAgent"],
+    model: "CivModel",
     fog_of_war: float = 0.0,
 ) -> str:
     from civ_sim.world.resources import ResourceType
+
     if not cities:
         return f"Civilization: {civ.name} — no cities remaining."
     total_pop = sum(c.population for c in cities)
     total_military = sum(c.military for c in cities)
     avg_fort = sum(c.fortification for c in cities) / len(cities)
     avg_food = sum(c.food_stock for c in cities) / len(cities)
-    total_minerals = sum(model.grid.get(c.x, c.y, ResourceType.MINERALS) for c in cities)
+    total_minerals = sum(
+        model.grid.get(c.x, c.y, ResourceType.MINERALS) for c in cities
+    )
     total_wood = sum(model.grid.get(c.x, c.y, ResourceType.WOOD) for c in cities)
     techs = ", ".join(sorted(civ.discovered_techs)) or "none"
 
-    avg_farmer     = sum(c.farmer_ratio     for c in cities) / len(cities)
-    avg_miner      = sum(c.miner_ratio      for c in cities) / len(cities)
+    avg_farmer = sum(c.farmer_ratio for c in cities) / len(cities)
+    avg_miner = sum(c.miner_ratio for c in cities) / len(cities)
     avg_woodcutter = sum(c.woodcutter_ratio for c in cities) / len(cities)
     avg_soil = sum(
         model.grid.avg_soil_fertility(civ.civ_id, c.x, c.y, model.config.harvest_radius)
         for c in cities
     ) / len(cities)
     avg_richness = sum(
-        model.grid.avg_mineral_richness(civ.civ_id, c.x, c.y, model.config.harvest_radius)
+        model.grid.avg_mineral_richness(
+            civ.civ_id, c.x, c.y, model.config.harvest_radius
+        )
         for c in cities
     ) / len(cities)
     avg_forest = sum(
@@ -237,12 +292,14 @@ def build_civ_state_snapshot(
     def _fmt(val: float | int) -> str:
         if not noisy:
             return str(int(val))
+        assert rng is not None
         factor = rng.uniform(max(0.01, 1.0 - fog_of_war), 1.0 + fog_of_war)
         return f"~{int(round(float(val) * factor))}"
 
     header = (
         f"Intelligence Report (fog={fog_of_war:.0%}):"
-        if noisy else "Intelligence Report:"
+        if noisy
+        else "Intelligence Report:"
     )
     lines = []
     for e in enemies:
@@ -265,7 +322,9 @@ def build_sector_user_message(
 ) -> str:
     parts = [f"## Civilization State\n{state_snapshot}"]
     if previous_opinions:
-        parts.append("## Previous Round Positions\n" + "\n---\n".join(previous_opinions))
+        parts.append(
+            "## Previous Round Positions\n" + "\n---\n".join(previous_opinions)
+        )
     action_keys = ", ".join(f'"{a}"' for a in spec["actions"])
     parts.append(
         f"\nProvide your analysis. In weight_requests, use exactly these keys: {action_keys}. "

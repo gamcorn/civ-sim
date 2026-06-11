@@ -1,12 +1,15 @@
 from __future__ import annotations
+
 import copy
+import importlib
 import json
 import os
+import types
 
 try:
-    import ray
-except ImportError:
-    ray = None  # type: ignore[assignment]
+    ray: types.ModuleType | None = importlib.import_module("ray")
+except ModuleNotFoundError:
+    ray = None
 
 from civ_sim.config import SimConfig
 from civ_sim.simulation.model import CivModel
@@ -17,7 +20,7 @@ def run_single(config: SimConfig, renderer=None) -> dict:
     model = CivModel(config)
 
     while model.running:
-        model.step()
+        model.step()  # ty: ignore[missing-argument]  # cascades from Mesa PEP-695 generics issue
         if renderer is not None and config.visualize:
             renderer.update(model)
 
@@ -48,8 +51,9 @@ def _sweep_worker(seed: int, base_config: SimConfig) -> dict:
     return run_single(cfg)
 
 
-def run_sweep(n_runs: int, base_config: SimConfig, output_db: str,
-              num_workers: int = 0) -> None:
+def run_sweep(
+    n_runs: int, base_config: SimConfig, output_db: str, num_workers: int = 0
+) -> None:
     """Distributed parameter sweep using Ray.
 
     Workers are pinned to one CPU core each (num_cpus=1) to prevent
@@ -64,15 +68,23 @@ def run_sweep(n_runs: int, base_config: SimConfig, output_db: str,
     """
     import duckdb
 
+    assert ray is not None, "Ray is required for sweep runs: pip install ray"
+
     effective_workers = num_workers or getattr(base_config, "num_sweep_workers", 0)
-    ray.init(ignore_reinit_error=True,
-             num_cpus=effective_workers if effective_workers > 0 else None)
+    ray.init(
+        ignore_reinit_error=True,
+        num_cpus=effective_workers if effective_workers > 0 else None,
+    )
 
     remote_worker = ray.remote(num_cpus=1)(_sweep_worker)
 
     # Remove a 0-byte placeholder (e.g. from tempfile) so DuckDB can create a
     # fresh valid database file at that path.
-    if output_db != ":memory:" and os.path.exists(output_db) and os.path.getsize(output_db) == 0:
+    if (
+        output_db != ":memory:"
+        and os.path.exists(output_db)
+        and os.path.getsize(output_db) == 0
+    ):
         os.unlink(output_db)
 
     con = duckdb.connect(output_db)
@@ -88,8 +100,7 @@ def run_sweep(n_runs: int, base_config: SimConfig, output_db: str,
         )
     """)
 
-    futures = [remote_worker.remote(seed=i, base_config=base_config)
-               for i in range(n_runs)]
+    futures = [remote_worker.remote(i, base_config) for i in range(n_runs)]
 
     remaining = list(futures)
     completed = 0
@@ -99,7 +110,7 @@ def run_sweep(n_runs: int, base_config: SimConfig, output_db: str,
         done, remaining = ray.wait(remaining, num_returns=1, timeout=60.0)
         if not done:
             errors += 1
-            print(f"\n  [warn] worker timed out after 60 s; skipping")
+            print("\n  [warn] worker timed out after 60 s; skipping")
             remaining = remaining[1:]
             continue
         for ref in done:
@@ -107,19 +118,30 @@ def run_sweep(n_runs: int, base_config: SimConfig, output_db: str,
                 r = ray.get(ref)
                 con.execute(
                     "INSERT INTO sweep_results VALUES (?,?,?,?,?,?,?)",
-                    (r["seed"], r["ticks"], r["winner"],
-                     json.dumps(r["traits_0"]), json.dumps(r["traits_1"]),
-                     json.dumps(r["techs_0"]),  json.dumps(r["techs_1"])),
+                    (
+                        r["seed"],
+                        r["ticks"],
+                        r["winner"],
+                        json.dumps(r["traits_0"]),
+                        json.dumps(r["traits_1"]),
+                        json.dumps(r["techs_0"]),
+                        json.dumps(r["techs_1"]),
+                    ),
                 )
                 completed += 1
-                print(f"\r  {completed}/{n_runs} runs complete"
-                      f"{f'  ({errors} errors)' if errors else ''}",
-                      end="", flush=True)
+                print(
+                    f"\r  {completed}/{n_runs} runs complete"
+                    f"{f'  ({errors} errors)' if errors else ''}",
+                    end="",
+                    flush=True,
+                )
             except Exception as exc:
                 errors += 1
                 print(f"\n  [warn] worker error: {exc}")
 
     con.close()
     ray.shutdown()
-    print(f"\nSweep complete: {completed} runs written to {output_db}"
-          + (f" ({errors} errors skipped)" if errors else ""))
+    print(
+        f"\nSweep complete: {completed} runs written to {output_db}"
+        + (f" ({errors} errors skipped)" if errors else "")
+    )

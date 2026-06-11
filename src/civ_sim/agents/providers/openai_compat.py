@@ -1,12 +1,13 @@
 from __future__ import annotations
+
 import asyncio
 from typing import TYPE_CHECKING
 
 import openai
 
+from civ_sim.agents.decisions import choose_action, get_feasible_actions
 from civ_sim.agents.providers.base import DecisionProvider
 from civ_sim.agents.providers.prompt import SYSTEM_PROMPT, build_prompt, parse_response
-from civ_sim.agents.decisions import choose_action, get_feasible_actions
 
 if TYPE_CHECKING:
     from civ_sim.agents.city import CityAgent

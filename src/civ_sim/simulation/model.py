@@ -1,19 +1,19 @@
 from __future__ import annotations
+
 import asyncio
 import math
-import random as stdlib_random
 
 import mesa
 import numpy as np
 
-from civ_sim.config import SimConfig
-from civ_sim.world.grid import ResourceGrid
-from civ_sim.world.events import EventSampler
-from civ_sim.world.resources import ResourceType
-from civ_sim.agents.civilization import Civilization, CulturalTraits
 from civ_sim.agents.city import CityAgent
-from civ_sim.technology.discovery import TechEngine
+from civ_sim.agents.civilization import Civilization, CulturalTraits
+from civ_sim.config import SimConfig
 from civ_sim.storage.logger import EventLogger
+from civ_sim.technology.discovery import TechEngine
+from civ_sim.world.events import EventSampler
+from civ_sim.world.grid import ResourceGrid
+from civ_sim.world.resources import ResourceType
 
 
 class CivModel(mesa.Model):
@@ -36,9 +36,12 @@ class CivModel(mesa.Model):
         # Sub-systems
         self.event_sampler = EventSampler(config, self.random)
         self.tech_engine = TechEngine()
-        self.logger = EventLogger(config.db_path, config.rng_seed, config.db_flush_interval)
+        self.logger = EventLogger(
+            config.db_path, config.rng_seed, config.db_flush_interval
+        )
 
         from civ_sim.storage.snapshot import SnapshotWriter
+
         self._snapshot_writer = (
             SnapshotWriter(config.db_path, config.rng_seed)
             if config.snapshot_interval > 0
@@ -48,8 +51,8 @@ class CivModel(mesa.Model):
         # Climate-shift counter (ticks remaining with reduced food regen)
         self._climate_penalty_ticks: int = 0
 
-        # Epidemic log for visualization: list of (tick, beta)
-        self._epidemic_log: list[tuple[int, float]] = []
+        # Epidemic log for visualization: list of (tick, beta, total_deaths)
+        self._epidemic_log: list[tuple[int, float, int]] = []
 
         # Attack events for visualization: list of (src_x, src_y, tgt_x, tgt_y, civ_id)
         self._attack_events: list[tuple[int, int, int, int, int]] = []
@@ -72,7 +75,9 @@ class CivModel(mesa.Model):
 
     # ------------------------------------------------------------------
 
-    def step(self) -> None:
+    def step(
+        self,
+    ) -> None:  # ty: ignore[invalid-method-override]  # Mesa PEP-695 generics
         self._attack_events = []
 
         # Compute climate penalty for this tick's regen BEFORE grid.step().
@@ -107,7 +112,9 @@ class CivModel(mesa.Model):
 
         # 6. Update civilization aggregates
         for civ in self.civilizations:
-            cities = [a for a in self.agents if isinstance(a, CityAgent) and a.civ is civ]
+            cities = [
+                a for a in self.agents if isinstance(a, CityAgent) and a.civ is civ
+            ]
             civ.update_aggregates(cities)
 
         # 6b. Decay all relations toward neutral
@@ -137,9 +144,9 @@ class CivModel(mesa.Model):
 
         # 8. Record history snapshot
         food_layer = self.grid.layers[ResourceType.FOOD].data
-        min_layer  = self.grid.layers[ResourceType.MINERALS].data
+        min_layer = self.grid.layers[ResourceType.MINERALS].data
         wood_layer = self.grid.layers[ResourceType.WOOD].data
-        ownership  = self.grid.ownership
+        ownership = self.grid.ownership
         self.history["tick"].append(self.steps)
         self.history["food_total"].append(float(food_layer.sum()))
         self.history["minerals_total"].append(float(min_layer.sum()))
@@ -150,10 +157,18 @@ class CivModel(mesa.Model):
             self.history[f"mil_{i}"].append(civ.total_military)
             self.history[f"food_civ_{i}"].append(float(food_layer[mask].sum()))
             self.history[f"wood_civ_{i}"].append(
-                sum(a.wood_stock for a in self.agents if isinstance(a, CityAgent) and a.civ is civ)
+                sum(
+                    a.wood_stock
+                    for a in self.agents
+                    if isinstance(a, CityAgent) and a.civ is civ
+                )
             )
             self.history[f"mineral_civ_{i}"].append(
-                sum(a.mineral_stock for a in self.agents if isinstance(a, CityAgent) and a.civ is civ)
+                sum(
+                    a.mineral_stock
+                    for a in self.agents
+                    if isinstance(a, CityAgent) and a.civ is civ
+                )
             )
             self.history[f"cities_{i}"].append(
                 sum(1 for a in self.agents if isinstance(a, CityAgent) and a.civ is civ)
@@ -179,6 +194,7 @@ class CivModel(mesa.Model):
     async def _dispatch_decisions(self) -> None:
         """Batch all city decisions by provider, run LLM providers concurrently."""
         from collections import defaultdict
+
         from civ_sim.agents.city import CityAgent
 
         by_provider: dict = defaultdict(list)
@@ -191,10 +207,10 @@ class CivModel(mesa.Model):
             for city, action in zip(cities, actions):
                 city._pending_action = action
 
-        await asyncio.gather(*[
-            _one_batch(provider, cities)
-            for provider, cities in by_provider.items()
-        ], return_exceptions=True)
+        await asyncio.gather(
+            *[_one_batch(provider, cities) for provider, cities in by_provider.items()],
+            return_exceptions=True,
+        )
 
     # ------------------------------------------------------------------
 
@@ -211,7 +227,8 @@ class CivModel(mesa.Model):
         for city in cities:
             # Count same-civ cities within 20 tiles — dense networks spread disease faster
             nearby = sum(
-                1 for other in cities
+                1
+                for other in cities
                 if other is not city
                 and other.civ.civ_id == city.civ.civ_id
                 and abs(other.x - city.x) + abs(other.y - city.y) <= 20
@@ -233,18 +250,18 @@ class CivModel(mesa.Model):
         revert_mask = np.zeros(ownership.shape, dtype=bool)
         rolls = self._np_rng.random(ownership.shape) < prob
         for civ in self.civilizations:
-            owned = (snap == civ.civ_id)
+            owned = snap == civ.civ_id
             enemy_adj = np.zeros(ownership.shape, dtype=bool)
             for other in self.civilizations:
                 if other.civ_id == civ.civ_id:
                     continue
-                e = (snap == other.civ_id)
+                e = snap == other.civ_id
                 # Orthogonal neighbor detection without edge wrapping
                 e_adj = np.zeros(ownership.shape, dtype=bool)
-                e_adj[1:, :]  |= e[:-1, :]   # neighbor above
-                e_adj[:-1, :] |= e[1:, :]    # neighbor below
-                e_adj[:, 1:]  |= e[:, :-1]   # neighbor left
-                e_adj[:, :-1] |= e[:, 1:]    # neighbor right
+                e_adj[1:, :] |= e[:-1, :]  # neighbor above
+                e_adj[:-1, :] |= e[1:, :]  # neighbor below
+                e_adj[:, 1:] |= e[:, :-1]  # neighbor left
+                e_adj[:, :-1] |= e[:, 1:]  # neighbor right
                 enemy_adj |= e_adj
             border = owned & enemy_adj
             revert_mask |= border & rolls
@@ -268,7 +285,10 @@ class CivModel(mesa.Model):
     def _find_settle_location(self, civ: "Civilization") -> tuple[int, int] | None:
         """Return an unclaimed frontier tile at least 6 tiles from every same-civ city."""
         from civ_sim.agents.city import CityAgent
-        own_positions = [(a.x, a.y) for a in self.agents if isinstance(a, CityAgent) and a.civ is civ]
+
+        own_positions = [
+            (a.x, a.y) for a in self.agents if isinstance(a, CityAgent) and a.civ is civ
+        ]
         ownership = np.asarray(self.grid.ownership)
         owned = ownership == civ.civ_id
         unclaimed = ownership == -1
@@ -288,7 +308,10 @@ class CivModel(mesa.Model):
         indices = self.random.sample(range(len(frontier_xs)), n)
         for i in indices:
             tx, ty = int(frontier_xs[i]), int(frontier_ys[i])
-            if not own_positions or min(abs(cx - tx) + abs(cy - ty) for cx, cy in own_positions) >= 6:
+            if (
+                not own_positions
+                or min(abs(cx - tx) + abs(cy - ty) for cx, cy in own_positions) >= 6
+            ):
                 return tx, ty
         return None
 
@@ -296,6 +319,7 @@ class CivModel(mesa.Model):
         cfg = self.config
         if not cfg.civ_providers:
             from civ_sim.config import ProviderConfig
+
             cfg.civ_providers = [ProviderConfig()]
         rng = self.random
         civs = []
@@ -310,13 +334,16 @@ class CivModel(mesa.Model):
                 risk_tolerance=rng.uniform(lo, hi),
             )
             from civ_sim.agents.providers.factory import create_provider
+
             provider_cfg = (
                 cfg.civ_providers[i]
                 if i < len(cfg.civ_providers)
                 else cfg.civ_providers[0]
             )
             provider = create_provider(provider_cfg)
-            civs.append(Civilization(civ_id=i, name=names[i], traits=traits, provider=provider))
+            civs.append(
+                Civilization(civ_id=i, name=names[i], traits=traits, provider=provider)
+            )
         return civs
 
     def _place_cities(self) -> None:
@@ -336,6 +363,7 @@ class CivModel(mesa.Model):
                     y = rng.randint(5, cfg.height - 5)
                     # Avoid placing two cities too close together
                     from civ_sim.agents.city import CityAgent as _CA
+
                     too_close = any(
                         abs(a.x - x) + abs(a.y - y) < 8
                         for a in self.agents

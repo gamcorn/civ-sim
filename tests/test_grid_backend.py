@@ -1,6 +1,8 @@
 import random
-import pytest
+
 import numpy as np
+import pytest
+
 from civ_sim.config import SimConfig
 from civ_sim.world.grid import ResourceGrid
 from civ_sim.world.resources import ResourceType
@@ -8,14 +10,21 @@ from civ_sim.world.resources import ResourceType
 
 @pytest.fixture
 def numpy_grid():
-    cfg = SimConfig(width=10, height=10, resource_max=100.0,
-                    food_regen=0.04, mineral_regen=0.0,
-                    grid_backend="numpy", rng_seed=0)
+    cfg = SimConfig(
+        width=10,
+        height=10,
+        resource_max=100.0,
+        food_regen=0.04,
+        mineral_regen=0.0,
+        grid_backend="numpy",
+        rng_seed=0,
+    )
     return ResourceGrid(10, 10, cfg, random.Random(0))
 
 
 def test_backend_attribute_is_numpy_module(numpy_grid):
     import numpy as np_mod
+
     assert numpy_grid.xp is np_mod
 
 

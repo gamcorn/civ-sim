@@ -1,13 +1,15 @@
 # tests/providers/test_council_provider.py
-import json
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from tests.conftest import make_mock_city
+
 from civ_sim.agents.decisions import ALL_ACTIONS
+from tests.conftest import make_mock_city
 
 
 def make_provider_config(**kwargs):
     from civ_sim.config import ProviderConfig
+
     defaults = dict(
         type="council",
         model="test-model",
@@ -27,6 +29,7 @@ def make_provider_config(**kwargs):
 
 def make_directive(issued_at_tick=0, valid_for_ticks=10, emergency=False):
     from civ_sim.agents.providers.council_provider import StrategicDirective
+
     return StrategicDirective(
         era_goal="Hold steady",
         action_weights={a: 0.0 for a in ALL_ACTIONS},
@@ -39,8 +42,10 @@ def make_directive(issued_at_tick=0, valid_for_ticks=10, emergency=False):
 
 # -- _should_run_council --
 
+
 def test_should_run_council_when_no_directive():
     from civ_sim.agents.providers.council_provider import CouncilProvider
+
     p = CouncilProvider(make_provider_config())
     city = make_mock_city()
     assert p._should_run_council(city.civ, [city], 0) is True
@@ -48,6 +53,7 @@ def test_should_run_council_when_no_directive():
 
 def test_should_run_council_on_cadence():
     from civ_sim.agents.providers.council_provider import CouncilProvider
+
     p = CouncilProvider(make_provider_config(directive_period=10))
     p._directive = make_directive(issued_at_tick=0)
     p._last_council_tick = 0
@@ -57,6 +63,7 @@ def test_should_run_council_on_cadence():
 
 def test_should_not_run_council_mid_period():
     from civ_sim.agents.providers.council_provider import CouncilProvider
+
     p = CouncilProvider(make_provider_config(directive_period=10))
     p._directive = make_directive(issued_at_tick=0)
     p._last_council_tick = 0
@@ -72,8 +79,10 @@ def test_should_not_run_council_mid_period():
 
 # -- _check_emergencies --
 
+
 def test_emergency_food_crisis():
     from civ_sim.agents.providers.council_provider import CouncilProvider
+
     p = CouncilProvider(make_provider_config())
     p._directive = make_directive()
     p._last_council_tick = 0
@@ -87,6 +96,7 @@ def test_emergency_food_crisis():
 
 def test_emergency_military_threat():
     from civ_sim.agents.providers.council_provider import CouncilProvider
+
     p = CouncilProvider(make_provider_config())
     city = make_mock_city(food_stock=200.0, tick=5)
     city.civ.total_military = 10
@@ -101,6 +111,7 @@ def test_emergency_military_threat():
 
 def test_emergency_city_lost():
     from civ_sim.agents.providers.council_provider import CouncilProvider
+
     p = CouncilProvider(make_provider_config())
     city = make_mock_city(food_stock=200.0, tick=5)
     city.civ.total_military = 100
@@ -114,7 +125,10 @@ def test_emergency_city_lost():
 
 def test_emergency_cooldown_prevents_re_trigger():
     from civ_sim.agents.providers.council_provider import CouncilProvider
-    p = CouncilProvider(make_provider_config(directive_period=10, emergency_cooldown_ticks=3))
+
+    p = CouncilProvider(
+        make_provider_config(directive_period=10, emergency_cooldown_ticks=3)
+    )
     p._directive = make_directive()
     p._last_council_tick = 0
     p._last_emergency_tick = 4  # recent emergency at tick 4
@@ -129,8 +143,13 @@ def test_emergency_cooldown_prevents_re_trigger():
 
 # -- _apply_directive --
 
+
 def test_apply_directive_selects_max_weighted_feasible_action():
-    from civ_sim.agents.providers.council_provider import CouncilProvider, StrategicDirective
+    from civ_sim.agents.providers.council_provider import (
+        CouncilProvider,
+        StrategicDirective,
+    )
+
     p = CouncilProvider(make_provider_config())
     # Give a huge boost to fortify (always feasible)
     p._directive = StrategicDirective(
@@ -147,10 +166,12 @@ def test_apply_directive_selects_max_weighted_feasible_action():
 
 # -- choose_actions_batch --
 
+
 @pytest.mark.asyncio
 async def test_choose_actions_batch_uses_existing_directive():
     """Directive within period → no council call."""
     from civ_sim.agents.providers.council_provider import CouncilProvider
+
     p = CouncilProvider(make_provider_config(directive_period=10))
     p._directive = make_directive(issued_at_tick=5)
     p._last_council_tick = 5
@@ -173,6 +194,7 @@ async def test_choose_actions_batch_uses_existing_directive():
 async def test_choose_actions_batch_falls_back_when_no_directive_and_llm_fails():
     """No directive + LLM error → rule_based fallback."""
     from civ_sim.agents.providers.council_provider import CouncilProvider
+
     p = CouncilProvider(make_provider_config())
     p._client = MagicMock()
     p._client.chat.completions.create = AsyncMock(side_effect=Exception("LLM down"))
@@ -188,6 +210,7 @@ async def test_choose_actions_batch_falls_back_when_no_directive_and_llm_fails()
 @pytest.mark.asyncio
 async def test_choose_actions_batch_empty_cities():
     from civ_sim.agents.providers.council_provider import CouncilProvider
+
     p = CouncilProvider(make_provider_config())
     result = await p.choose_actions_batch([])
     assert result == []

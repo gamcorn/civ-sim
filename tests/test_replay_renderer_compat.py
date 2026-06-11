@@ -1,11 +1,18 @@
 """Verify that both renderers accept ReplayFrame objects (duck-typing contract)."""
+
 import io
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
 
-from civ_sim.storage.snapshot import CivState, CityState, _LayerProxy, GridState, ReplayFrame
+from civ_sim.storage.snapshot import (
+    CityState,
+    CivState,
+    GridState,
+    ReplayFrame,
+    _LayerProxy,
+)
 from civ_sim.world.resources import ResourceType
 
 
@@ -16,8 +23,15 @@ def _make_frame(n_civs=2, n_cities=1):
         for i in range(n_civs)
     ]
     agents = [
-        CityState(x=5 * (i + 1), y=5, population=80.0, military=10.0,
-                  food_stock=20.0, last_action="gather", civ=civs[i % n_civs])
+        CityState(
+            x=5 * (i + 1),
+            y=5,
+            population=80.0,
+            military=10.0,
+            food_stock=20.0,
+            last_action="gather",
+            civ=civs[i % n_civs],
+        )
         for i in range(n_cities)
     ]
     w, h = 20, 15
@@ -31,8 +45,10 @@ def _make_frame(n_civs=2, n_cities=1):
         "mil_1": [10.0, 9.0],
     }
     return ReplayFrame(
-        steps=2, running=True,
-        civilizations=civs, agents=agents,
+        steps=2,
+        running=True,
+        civilizations=civs,
+        agents=agents,
         grid=GridState(
             ownership=ownership,
             layers={ResourceType.FOOD: _LayerProxy(food)},

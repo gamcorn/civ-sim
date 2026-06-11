@@ -1,20 +1,30 @@
 # agents/providers/council_ministers.py
 from __future__ import annotations
+
 import asyncio
 import json
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import openai
 
 from civ_sim.agents.decisions import ALL_ACTIONS
 from civ_sim.agents.providers.council_prompts import (
-    SECTOR_SCHEMA, SECTOR_SCHEMA_DICT, build_sector_schema_dict, build_sector_schema_str,
-    BUDGET_SCHEMA, BUDGET_SCHEMA_DICT,
-    CHIEF_SCHEMA, CHIEF_SCHEMA_DICT,
-    CHIEF_LITE_SCHEMA, CHIEF_LITE_SCHEMA_DICT,
-    build_sector_persona, build_budget_persona, build_chief_persona, build_chief_lite_persona,
-    build_sector_user_message, build_budget_user_message,
-    build_chief_user_message, build_chief_lite_user_message,
+    BUDGET_SCHEMA,
+    BUDGET_SCHEMA_DICT,
+    CHIEF_LITE_SCHEMA,
+    CHIEF_LITE_SCHEMA_DICT,
+    CHIEF_SCHEMA,
+    CHIEF_SCHEMA_DICT,
+    build_budget_persona,
+    build_budget_user_message,
+    build_chief_lite_persona,
+    build_chief_lite_user_message,
+    build_chief_persona,
+    build_chief_user_message,
+    build_sector_persona,
+    build_sector_schema_dict,
+    build_sector_schema_str,
+    build_sector_user_message,
 )
 
 if TYPE_CHECKING:
@@ -28,12 +38,15 @@ def _parse_json_safe(raw: str) -> dict[str, Any] | None:
     # Strip everything up to and including the closing </think> tag.
     think_end = text.rfind("</think>")
     if think_end != -1:
-        text = text[think_end + len("</think>"):].strip()
+        text = text[think_end + len("</think>") :].strip()
 
     # Strip markdown code block wrapper
     if text.startswith("```"):
         lines = text.splitlines()
-        end = next((i for i in range(len(lines) - 1, 0, -1) if lines[i].strip() == "```"), len(lines))
+        end = next(
+            (i for i in range(len(lines) - 1, 0, -1) if lines[i].strip() == "```"),
+            len(lines),
+        )
         text = "\n".join(lines[1:end]).strip()
 
     # Direct parse (fast path)
@@ -46,7 +59,7 @@ def _parse_json_safe(raw: str) -> dict[str, Any] | None:
     last_brace = text.rfind("}")
     if last_brace == -1:
         return None
-    text = text[:last_brace + 1]
+    text = text[: last_brace + 1]
     pos = text.rfind("{")
     while pos != -1:
         try:
@@ -108,7 +121,9 @@ async def call_sector_minister(
     schema_str = build_sector_schema_str(spec)
     schema_dict = build_sector_schema_dict(spec) if guided_json else None
     parsed = await _call_llm(
-        client, model, timeout,
+        client,
+        model,
+        timeout,
         system=f"{persona}\n\nSchema:\n{schema_str}",
         user=user_msg,
         temperature=0.3,
@@ -139,14 +154,20 @@ async def call_budget_minister(
     persona = build_budget_persona(traits)
     user_msg = build_budget_user_message(state_snapshot, sector_outputs)
     parsed = await _call_llm(
-        client, model, timeout,
+        client,
+        model,
+        timeout,
         system=f"{persona}\n\nSchema:\n{BUDGET_SCHEMA}",
         user=user_msg,
         temperature=0.2,
         max_tokens=512,
         guided_json=BUDGET_SCHEMA_DICT if guided_json else None,
     )
-    return parsed if parsed is not None else {"veto": False, "veto_reason": None, "approved_weights": {}}
+    return (
+        parsed
+        if parsed is not None
+        else {"veto": False, "veto_reason": None, "approved_weights": {}}
+    )
 
 
 async def call_chief(
@@ -166,7 +187,9 @@ async def call_chief(
         state_snapshot, sector_outputs, budget_output, round_num, max_rounds
     )
     parsed = await _call_llm(
-        client, model, timeout,
+        client,
+        model,
+        timeout,
         system=f"{persona}\n\nSchema:\n{CHIEF_SCHEMA}",
         user=user_msg,
         temperature=0.2,
@@ -177,8 +200,7 @@ async def call_chief(
         return None
     weights = parsed.get("action_weights", {})
     parsed["action_weights"] = {
-        a: max(-1.0, min(1.0, float(weights.get(a, 0.0))))
-        for a in ALL_ACTIONS
+        a: max(-1.0, min(1.0, float(weights.get(a, 0.0)))) for a in ALL_ACTIONS
     }
     return parsed
 
@@ -195,7 +217,9 @@ async def call_chief_lite(
     persona = build_chief_lite_persona(traits)
     user_msg = build_chief_lite_user_message(state_snapshot)
     parsed = await _call_llm(
-        client, model, timeout,
+        client,
+        model,
+        timeout,
         system=f"{persona}\n\nSchema:\n{CHIEF_LITE_SCHEMA}",
         user=user_msg,
         temperature=0.2,
@@ -206,7 +230,6 @@ async def call_chief_lite(
         return None
     weights = parsed.get("action_weights", {})
     parsed["action_weights"] = {
-        a: max(-1.0, min(1.0, float(weights.get(a, 0.0))))
-        for a in ALL_ACTIONS
+        a: max(-1.0, min(1.0, float(weights.get(a, 0.0)))) for a in ALL_ACTIONS
     }
     return parsed

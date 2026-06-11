@@ -1,17 +1,19 @@
 # tests/providers/test_council_prompts.py
-import pytest
 from unittest.mock import MagicMock
-from tests.conftest import make_mock_city
+
 from civ_sim.agents.providers.council_prompts import (
     MINISTER_SPECS,
-    build_sector_persona,
     build_chief_persona,
     build_civ_state_snapshot,
+    build_sector_persona,
     build_sector_user_message,
 )
+from tests.conftest import make_mock_city
 
 
-def make_traits(aggressiveness=0.5, trust=0.5, innovation=0.5, tribalism=0.5, risk_tolerance=0.5):
+def make_traits(
+    aggressiveness=0.5, trust=0.5, innovation=0.5, tribalism=0.5, risk_tolerance=0.5
+):
     t = MagicMock()
     t.aggressiveness = aggressiveness
     t.trust = trust
@@ -54,8 +56,8 @@ def test_build_civ_state_snapshot_contains_key_fields():
     city = make_mock_city(pop=200, military=30, food_stock=100.0, tick=15)
     snapshot = build_civ_state_snapshot(city.civ, [city], city.model)
     assert "Turn: 15" in snapshot
-    assert "200" in snapshot   # population
-    assert "30" in snapshot    # military
+    assert "200" in snapshot  # population
+    assert "30" in snapshot  # military
 
 
 def test_build_civ_state_snapshot_contains_enemy_intel():

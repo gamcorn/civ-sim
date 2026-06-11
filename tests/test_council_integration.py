@@ -1,20 +1,30 @@
 # tests/test_council_integration.py
-import pytest
-from unittest.mock import MagicMock
+
 from civ_sim.agents.decisions import ALL_ACTIONS
 
 
 def test_council_provider_issues_directive_on_first_step():
     """First model step: CouncilProvider runs council, directive is issued and logged."""
+    from civ_sim.agents.providers.council_provider import (
+        CouncilProvider,
+        StrategicDirective,
+    )
     from civ_sim.config import ProviderConfig, SimConfig
-    from civ_sim.agents.providers.council_provider import CouncilProvider, StrategicDirective
     from civ_sim.simulation.model import CivModel
 
     cfg = SimConfig(
-        width=20, height=20, num_civs=2, cities_per_civ=1,
-        max_ticks=5, rng_seed=1, db_path=":memory:", visualize=False,
+        width=20,
+        height=20,
+        num_civs=2,
+        cities_per_civ=1,
+        max_ticks=5,
+        rng_seed=1,
+        db_path=":memory:",
+        visualize=False,
         civ_providers=[
-            ProviderConfig(type="council", model="test-model", directive_period=5, max_rounds=1),
+            ProviderConfig(
+                type="council", model="test-model", directive_period=5, max_rounds=1
+            ),
             ProviderConfig(type="rule_based"),
         ],
     )

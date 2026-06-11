@@ -1,6 +1,8 @@
 import random
-import pytest
 from unittest.mock import patch
+
+import pytest
+
 from civ_sim.config import SimConfig
 from civ_sim.world.events import EventSampler
 from civ_sim.world.grid import ResourceGrid
@@ -10,9 +12,13 @@ from civ_sim.world.resources import ResourceType
 @pytest.fixture
 def cfg():
     return SimConfig(
-        width=20, height=20, resource_max=100.0,
-        drought_prob=0.0, disease_prob=0.0,
-        mineral_boom_prob=0.0, climate_shift_prob=0.0,
+        width=20,
+        height=20,
+        resource_max=100.0,
+        drought_prob=0.0,
+        disease_prob=0.0,
+        mineral_boom_prob=0.0,
+        climate_shift_prob=0.0,
         rng_seed=0,
     )
 
@@ -95,6 +101,7 @@ def test_all_events_fire_when_all_probs_one(cfg, grid):
 def test_climate_shift_reduces_regen_not_tile_data(mini_model):
     """After a climate shift, grid regen is throttled but existing tile food is untouched."""
     from civ_sim.world.resources import ResourceType
+
     mini_model.grid.layers[ResourceType.FOOD].data[:] = 50.0
     mini_model._climate_penalty_ticks = 1
 
@@ -102,13 +109,18 @@ def test_climate_shift_reduces_regen_not_tile_data(mini_model):
     mini_model.grid.step(food_regen_mult=0.85)
     food_after = float(mini_model.grid.layers[ResourceType.FOOD].data.sum())
 
-    assert food_after >= food_before, (
-        f"Climate shift must not destroy tile food; before={food_before:.1f} after={food_after:.1f}"
+    assert (
+        food_after >= food_before
+    ), f"Climate shift must not destroy tile food; before={food_before:.1f} after={food_after:.1f}"
+    full_regen = (
+        mini_model.config.food_regen
+        * mini_model.config.resource_max
+        * mini_model.grid.width
+        * mini_model.grid.height
     )
-    full_regen = mini_model.config.food_regen * mini_model.config.resource_max * mini_model.grid.width * mini_model.grid.height
-    assert (food_after - food_before) < full_regen, (
-        "Climate-penalised regen should be less than full regen"
-    )
+    assert (
+        food_after - food_before
+    ) < full_regen, "Climate-penalised regen should be less than full regen"
 
 
 def test_model_computes_climate_penalty_multiplier(mini_model):
@@ -126,6 +138,6 @@ def test_model_computes_climate_penalty_multiplier(mini_model):
         mini_model.step()
 
     assert captured_mult, "grid.step() should have been called during model.step()"
-    assert captured_mult[0] == pytest.approx(0.85), (
-        f"grid.step() should receive food_regen_mult=0.85 when penalty active; got {captured_mult[0]}"
-    )
+    assert captured_mult[0] == pytest.approx(
+        0.85
+    ), f"grid.step() should receive food_regen_mult=0.85 when penalty active; got {captured_mult[0]}"

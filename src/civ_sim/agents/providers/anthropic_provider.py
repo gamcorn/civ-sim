@@ -1,12 +1,14 @@
 from __future__ import annotations
+
 import asyncio
 from typing import TYPE_CHECKING
 
 import anthropic
+from anthropic.types import TextBlock
 
+from civ_sim.agents.decisions import choose_action, get_feasible_actions
 from civ_sim.agents.providers.base import DecisionProvider
 from civ_sim.agents.providers.prompt import SYSTEM_PROMPT, build_prompt, parse_response
-from civ_sim.agents.decisions import choose_action, get_feasible_actions
 
 if TYPE_CHECKING:
     from civ_sim.agents.city import CityAgent
@@ -46,7 +48,8 @@ class AnthropicProvider(DecisionProvider):
                 ),
                 timeout=self._config.timeout,
             )
-            raw = response.content[0].text if response.content else ""
+            block = response.content[0] if response.content else None
+            raw = block.text if isinstance(block, TextBlock) else ""
             return parse_response(raw, feasible, fallback)
         except Exception:
             return fallback

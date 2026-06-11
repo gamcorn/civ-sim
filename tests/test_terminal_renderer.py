@@ -1,4 +1,4 @@
-from civ_sim.visualization.terminal_renderer import _tile_char, _city_char
+from civ_sim.visualization.terminal_renderer import _city_char, _tile_char
 
 
 def test_tile_char_empty():
@@ -71,7 +71,6 @@ def test_city_char_unknown_civ():
 def test_terminal_renderer_update_no_crash():
     """update() must not raise on a real model tick."""
     import io
-    import sys
     from unittest.mock import patch
 
     from civ_sim.config import SimConfig

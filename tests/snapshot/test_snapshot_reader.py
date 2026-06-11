@@ -1,9 +1,11 @@
-import tempfile, os
-import numpy as np
-import duckdb
-from civ_sim.storage.snapshot import SnapshotWriter, SnapshotReader, ReplayFrame
-from civ_sim.world.resources import ResourceType
+import os
+import tempfile
 from unittest.mock import MagicMock
+
+import numpy as np
+
+from civ_sim.storage.snapshot import ReplayFrame, SnapshotReader, SnapshotWriter
+from civ_sim.world.resources import ResourceType
 
 
 def _write_two_snapshots(db_path):
@@ -101,6 +103,7 @@ def test_reader_load_missing_tick_raises():
 
 def test_reader_ticks_empty_on_no_snapshots_table():
     import duckdb as _duckdb
+
     with tempfile.NamedTemporaryFile(suffix=".duckdb", delete=True) as f:
         db_path = f.name
     try:
@@ -128,6 +131,7 @@ def test_reader_load_city_civ_round_trip():
         grid.config.resource_max = 100.0
 
         from civ_sim.agents.city import CityAgent
+
         city = MagicMock(spec=CityAgent)
         city.unique_id = "u1"
         civ_mock = MagicMock()
@@ -202,6 +206,7 @@ def test_reader_load_ownership_round_trip():
 
 def test_reader_history_sliced_with_events():
     import duckdb as _duckdb
+
     with tempfile.NamedTemporaryFile(suffix=".duckdb", delete=True) as f:
         db_path = f.name
     try:

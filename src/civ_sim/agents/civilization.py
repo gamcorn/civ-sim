@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import dataclasses
 from typing import TYPE_CHECKING
 
@@ -16,6 +17,7 @@ class CulturalTraits:
 
     def mutate(self, rng, sigma: float = 0.05) -> "CulturalTraits":
         """Return a new CulturalTraits with Gaussian noise on each trait."""
+
         def clamp(v):
             return max(0.0, min(1.0, v))
 
@@ -41,6 +43,7 @@ class Civilization:
 
         if provider is None:
             from civ_sim.agents.providers.rule_based import RuleBasedProvider
+
             provider = RuleBasedProvider()
         self.provider = provider
 
@@ -52,16 +55,20 @@ class Civilization:
         self.discovered_techs: set[str] = set()
         self.alive: bool = True
 
-        self.science_points: float = 0.0   # accumulated research progress (used by Task 8)
-        self.harvest_bonus: float = 1.0    # food/resource yield multiplier from tech
-        self.military_tech_bonus: float = 0.0   # additive military strength bonus from tech
-        self.trade_range_bonus: int = 0          # extra tiles added to base trade range (30)
+        self.science_points: float = (
+            0.0  # accumulated research progress (used by Task 8)
+        )
+        self.harvest_bonus: float = 1.0  # food/resource yield multiplier from tech
+        self.military_tech_bonus: float = (
+            0.0  # additive military strength bonus from tech
+        )
+        self.trade_range_bonus: int = 0  # extra tiles added to base trade range (30)
 
         # Labor economy fields (Tasks 3-4)
-        self.land_productivity:   float = 0.5
-        self.mining_efficiency:   float = 0.5
+        self.land_productivity: float = 0.5
+        self.mining_efficiency: float = 0.5
         self.forestry_efficiency: float = 0.5
-        self.unlocked_actions:    set[str] = set()
+        self.unlocked_actions: set[str] = set()
 
         # Council emergency tracking — updated by CouncilProvider after each directive
         self._pop_at_last_directive: int = 0

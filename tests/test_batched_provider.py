@@ -1,8 +1,9 @@
-import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from civ_sim.config import ProviderConfig
+
+import pytest
+
 from civ_sim.agents.providers.openai_compat import OpenAICompatibleProvider
+from civ_sim.config import ProviderConfig
 from tests.conftest import make_mock_city
 
 
@@ -34,12 +35,17 @@ def _make_chat_response(text):
 async def test_choose_actions_batch_chat_returns_one_action_per_city():
     provider = _provider(use_completions_api=False)
     cities = [make_mock_city() for _ in range(3)]
-    with patch.object(provider._client.chat.completions, "create",
-                      new=AsyncMock(return_value=_make_chat_response("gather"))):
+    with patch.object(
+        provider._client.chat.completions,
+        "create",
+        new=AsyncMock(return_value=_make_chat_response("gather")),
+    ):
         results = await provider.choose_actions_batch(cities)
     assert len(results) == 3
-    assert all(r in ["gather", "fortify", "trade", "expand", "attack", "research"]
-               for r in results)
+    assert all(
+        r in ["gather", "fortify", "trade", "expand", "attack", "research"]
+        for r in results
+    )
 
 
 @pytest.mark.asyncio
@@ -53,8 +59,11 @@ async def test_choose_actions_batch_chat_respects_semaphore():
         call_count += 1
         return _make_chat_response("gather")
 
-    with patch.object(provider._client.chat.completions, "create",
-                      new=AsyncMock(side_effect=fake_create)):
+    with patch.object(
+        provider._client.chat.completions,
+        "create",
+        new=AsyncMock(side_effect=fake_create),
+    ):
         results = await provider.choose_actions_batch(cities)
     assert len(results) == 5
     assert call_count == 5
@@ -66,9 +75,10 @@ async def test_choose_actions_batch_completions_sends_one_request():
     cities = [make_mock_city() for _ in range(4)]
     fake_resp = _make_completion_response(["gather", "attack", "fortify", "gather"])
 
-    with patch.object(provider._client.completions, "create",
-                      new=AsyncMock(return_value=fake_resp)) as mock_create:
-        results = await provider.choose_actions_batch(cities)
+    with patch.object(
+        provider._client.completions, "create", new=AsyncMock(return_value=fake_resp)
+    ) as mock_create:
+        await provider.choose_actions_batch(cities)
 
     mock_create.assert_called_once()
     call_kwargs = mock_create.call_args.kwargs
@@ -82,8 +92,9 @@ async def test_choose_actions_batch_completions_returns_valid_actions():
     cities = [make_mock_city() for _ in range(3)]
     fake_resp = _make_completion_response(["gather", "INVALID_ACTION", "fortify"])
 
-    with patch.object(provider._client.completions, "create",
-                      new=AsyncMock(return_value=fake_resp)):
+    with patch.object(
+        provider._client.completions, "create", new=AsyncMock(return_value=fake_resp)
+    ):
         results = await provider.choose_actions_batch(cities)
 
     assert results[0] == "gather"
@@ -96,10 +107,15 @@ async def test_choose_actions_batch_completions_falls_back_on_exception():
     provider = _provider(use_completions_api=True)
     cities = [make_mock_city() for _ in range(2)]
 
-    with patch.object(provider._client.completions, "create",
-                      new=AsyncMock(side_effect=Exception("vLLM down"))):
+    with patch.object(
+        provider._client.completions,
+        "create",
+        new=AsyncMock(side_effect=Exception("vLLM down")),
+    ):
         results = await provider.choose_actions_batch(cities)
 
     assert len(results) == 2
-    assert all(r in ["gather", "fortify", "trade", "expand", "attack", "research"]
-               for r in results)
+    assert all(
+        r in ["gather", "fortify", "trade", "expand", "attack", "research"]
+        for r in results
+    )

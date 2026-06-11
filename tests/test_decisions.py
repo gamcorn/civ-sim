@@ -1,10 +1,8 @@
 """Tests for agents/decisions.py — choose_action, modifiers, and feasibility."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
-
-import numpy as np
-import pytest
 
 from civ_sim.agents.decisions import (
     ALL_ACTIONS,
@@ -13,7 +11,6 @@ from civ_sim.agents.decisions import (
     FORTIFY,
     GATHER,
     RESEARCH,
-    TRADE,
     _attack_target,
     _has_unclaimed_neighbor,
     _resource_modifier,
@@ -22,7 +19,6 @@ from civ_sim.agents.decisions import (
     get_feasible_actions,
 )
 from tests.conftest import make_mock_city
-
 
 # ---------------------------------------------------------------------------
 # get_action_scores
@@ -248,6 +244,7 @@ def test_attack_modifier_negative_when_clearly_outgunned():
 def test_enemy_military_sums_all_rivals():
     """_enemy_military must sum military across ALL non-self civs, not just the first."""
     import types
+
     from civ_sim.agents.decisions import _enemy_military
 
     city = make_mock_city(civ_id=0, enemy_military=50)
@@ -268,7 +265,8 @@ def test_enemy_military_sums_all_rivals():
 def test_attack_infeasible_without_mineral_cost(mini_model):
     """Attack must be infeasible when mineral_stock < attack_mineral_cost."""
     from civ_sim.agents.city import CityAgent
-    from civ_sim.agents.decisions import get_feasible_actions, ATTACK
+    from civ_sim.agents.decisions import ATTACK, get_feasible_actions
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
     city.military = 20
@@ -276,7 +274,9 @@ def test_attack_infeasible_without_mineral_cost(mini_model):
 
     # Place an enemy city close enough to pass the target check
     enemy_civ = mini_model.civilizations[1]
-    enemy_cities = [a for a in mini_model.agents if isinstance(a, CityAgent) and a.civ is enemy_civ]
+    enemy_cities = [
+        a for a in mini_model.agents if isinstance(a, CityAgent) and a.civ is enemy_civ
+    ]
     assert enemy_cities, "Need enemy city for this test"
     enemy = enemy_cities[0]
     enemy.x, enemy.y = city.x + 3, city.y
@@ -288,7 +288,8 @@ def test_attack_infeasible_without_mineral_cost(mini_model):
 def test_expand_infeasible_without_wood_cost(mini_model):
     """Expand must be infeasible when wood_stock < expand_wood_cost."""
     from civ_sim.agents.city import CityAgent
-    from civ_sim.agents.decisions import get_feasible_actions, EXPAND
+    from civ_sim.agents.decisions import get_feasible_actions
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
     city.wood_stock = 0.0
@@ -303,8 +304,9 @@ def test_expand_infeasible_without_wood_cost(mini_model):
 def test_research_infeasible_without_stockpile(mini_model):
     """Research must be infeasible when stockpile is below cost thresholds."""
     from civ_sim.agents.city import CityAgent
-    from civ_sim.agents.decisions import get_feasible_actions, RESEARCH
+    from civ_sim.agents.decisions import RESEARCH, get_feasible_actions
     from civ_sim.world.resources import ResourceType
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
     # Set tile resources high (old check would allow research)
@@ -315,13 +317,16 @@ def test_research_infeasible_without_stockpile(mini_model):
     city.mineral_stock = 0.0
 
     feasible = get_feasible_actions(city)
-    assert RESEARCH not in feasible, "RESEARCH should be infeasible with empty stockpile"
+    assert (
+        RESEARCH not in feasible
+    ), "RESEARCH should be infeasible with empty stockpile"
 
 
 def test_recruit_infeasible_when_pop_too_low(mini_model):
     """RECRUIT must not appear when city population is at or below the draft floor."""
-    from civ_sim.agents.decisions import get_feasible_actions, RECRUIT
     from civ_sim.agents.city import CityAgent
+    from civ_sim.agents.decisions import RECRUIT, get_feasible_actions
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
     city.population = mini_model.config.initial_pop  # at floor
@@ -333,12 +338,17 @@ def test_recruit_infeasible_when_pop_too_low(mini_model):
 
 def test_recruit_feasible_when_pop_high_and_minerals_available(mini_model):
     """RECRUIT must be feasible when pop is above floor and minerals cover cost."""
-    from civ_sim.agents.decisions import get_feasible_actions, RECRUIT
     from civ_sim.agents.city import CityAgent
+    from civ_sim.agents.decisions import RECRUIT, get_feasible_actions
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
-    city.population = mini_model.config.initial_pop + mini_model.config.recruit_pop_cost + 10
+    city.population = (
+        mini_model.config.initial_pop + mini_model.config.recruit_pop_cost + 10
+    )
     city.mineral_stock = mini_model.config.recruit_mineral_cost + 5.0
 
     feasible = get_feasible_actions(city)
-    assert RECRUIT in feasible, "RECRUIT must be feasible when pop > floor and minerals sufficient"
+    assert (
+        RECRUIT in feasible
+    ), "RECRUIT must be feasible when pop > floor and minerals sufficient"

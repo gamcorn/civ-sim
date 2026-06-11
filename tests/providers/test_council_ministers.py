@@ -1,7 +1,8 @@
 # tests/providers/test_council_ministers.py
 import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 
 def make_mock_llm_response(content: str):
@@ -23,12 +24,14 @@ async def test_call_sector_minister_returns_structured_output():
     from civ_sim.agents.providers.council_ministers import call_sector_minister
     from civ_sim.agents.providers.council_prompts import MINISTER_SPECS
 
-    content = json.dumps({
-        "analysis": "Enemy is weak",
-        "recommendation": "Attack east flank",
-        "weight_requests": {"attack": 0.8, "fortify": 0.2},
-        "disagreement_level": 0.1,
-    })
+    content = json.dumps(
+        {
+            "analysis": "Enemy is weak",
+            "recommendation": "Attack east flank",
+            "weight_requests": {"attack": 0.8, "fortify": 0.2},
+            "disagreement_level": 0.1,
+        }
+    )
     traits = MagicMock()
     traits.aggressiveness = 0.8
     client = make_async_client(content)
@@ -62,9 +65,10 @@ async def test_call_sector_minister_fallback_on_bad_json():
 
 @pytest.mark.asyncio
 async def test_call_sector_minister_fallback_on_timeout():
+    import asyncio
+
     from civ_sim.agents.providers.council_ministers import call_sector_minister
     from civ_sim.agents.providers.council_prompts import MINISTER_SPECS
-    import asyncio
 
     traits = MagicMock()
     traits.aggressiveness = 0.5
@@ -82,16 +86,20 @@ async def test_call_sector_minister_fallback_on_timeout():
 async def test_call_budget_minister_returns_structured_output():
     from civ_sim.agents.providers.council_ministers import call_budget_minister
 
-    content = json.dumps({
-        "veto": False,
-        "veto_reason": None,
-        "approved_weights": {"attack": 0.6},
-    })
+    content = json.dumps(
+        {
+            "veto": False,
+            "veto_reason": None,
+            "approved_weights": {"attack": 0.6},
+        }
+    )
     traits = MagicMock()
     traits.risk_tolerance = 0.5
     client = make_async_client(content)
 
-    result = await call_budget_minister("state...", [], traits, client, "test-model", 5.0)
+    result = await call_budget_minister(
+        "state...", [], traits, client, "test-model", 5.0
+    )
 
     assert result["veto"] is False
     assert result["approved_weights"]["attack"] == 0.6
@@ -99,16 +107,18 @@ async def test_call_budget_minister_returns_structured_output():
 
 @pytest.mark.asyncio
 async def test_call_chief_returns_parsed_directive():
-    from civ_sim.agents.providers.council_ministers import call_chief
     from civ_sim.agents.decisions import ALL_ACTIONS
+    from civ_sim.agents.providers.council_ministers import call_chief
 
-    content = json.dumps({
-        "era_goal": "Dominate the east",
-        "action_weights": {a: 0.0 for a in ALL_ACTIONS} | {"attack": 0.9},
-        "reasoning": "We are stronger",
-        "veto_overridden": False,
-        "veto_override_justification": None,
-    })
+    content = json.dumps(
+        {
+            "era_goal": "Dominate the east",
+            "action_weights": {a: 0.0 for a in ALL_ACTIONS} | {"attack": 0.9},
+            "reasoning": "We are stronger",
+            "veto_overridden": False,
+            "veto_override_justification": None,
+        }
+    )
     traits = MagicMock()
     traits.risk_tolerance = 0.8
     client = make_async_client(content)
@@ -123,16 +133,18 @@ async def test_call_chief_returns_parsed_directive():
 
 @pytest.mark.asyncio
 async def test_call_chief_clamps_weights():
-    from civ_sim.agents.providers.council_ministers import call_chief
     from civ_sim.agents.decisions import ALL_ACTIONS
+    from civ_sim.agents.providers.council_ministers import call_chief
 
-    content = json.dumps({
-        "era_goal": "Test",
-        "action_weights": {a: 5.0 for a in ALL_ACTIONS},
-        "reasoning": "extreme",
-        "veto_overridden": False,
-        "veto_override_justification": None,
-    })
+    content = json.dumps(
+        {
+            "era_goal": "Test",
+            "action_weights": {a: 5.0 for a in ALL_ACTIONS},
+            "reasoning": "extreme",
+            "veto_overridden": False,
+            "veto_override_justification": None,
+        }
+    )
     traits = MagicMock()
     traits.risk_tolerance = 0.5
     client = make_async_client(content)

@@ -1,19 +1,31 @@
-import pytest
 from unittest.mock import MagicMock
+
 import numpy as np
+import pytest
+
 from civ_sim.config import SimConfig
 from civ_sim.simulation.model import CivModel
 
 
 def make_mock_city(
-    pop=200, military=20, food_stock=150.0,
-    aggressiveness=0.5, trust=0.5, innovation=0.5,
-    tribalism=0.5, risk_tolerance=0.5,
-    civ_id=0, civ_name="Alpha",
-    enemy_military=20, tick=10,
-    techs=None, territory=50,
-    wood=30.0, minerals=20.0,
-    wood_stock=30.0, mineral_stock=20.0,
+    pop=200,
+    military=20,
+    food_stock=150.0,
+    aggressiveness=0.5,
+    trust=0.5,
+    innovation=0.5,
+    tribalism=0.5,
+    risk_tolerance=0.5,
+    civ_id=0,
+    civ_name="Alpha",
+    enemy_military=20,
+    tick=10,
+    techs=None,
+    territory=50,
+    wood=30.0,
+    minerals=20.0,
+    wood_stock=30.0,
+    mineral_stock=20.0,
     has_unclaimed_neighbor=True,
     has_trade_partner=False,
 ):
@@ -68,11 +80,13 @@ def make_mock_city(
 
     def _get(x, y, rt):
         from civ_sim.world.resources import ResourceType
+
         if rt == ResourceType.WOOD:
             return wood
         if rt == ResourceType.MINERALS:
             return minerals
         return 50.0  # food default
+
     grid.get.side_effect = _get
     grid.avg_soil_fertility.return_value = 50.0
     grid.avg_mineral_richness.return_value = 50.0
@@ -91,11 +105,11 @@ def make_mock_city(
     model.config.initial_pop = 50
     model.config.recruit_pop_cost = 10
     model.config.recruit_mineral_cost = 3.0
-    model.config.cultivate_wood_cost    = 3.0
+    model.config.cultivate_wood_cost = 3.0
     model.config.cultivate_mineral_cost = 2.0
-    model.config.mine_mineral_cost      = 3.0
-    model.config.woodcut_wood_cost      = 2.0
-    model.config.labor_ratio_delta      = 0.05
+    model.config.mine_mineral_cost = 3.0
+    model.config.woodcut_wood_cost = 2.0
+    model.config.labor_ratio_delta = 0.05
     model.config.relation_decay = 0.002
     model.config.trade_relation_bonus = 0.05
     model.config.attack_relation_penalty = 0.3

@@ -1,7 +1,7 @@
 def test_factory_creates_rule_based():
-    from civ_sim.config import ProviderConfig
     from civ_sim.agents.providers.factory import create_provider
     from civ_sim.agents.providers.rule_based import RuleBasedProvider
+    from civ_sim.config import ProviderConfig
 
     cfg = ProviderConfig(type="rule_based")
     provider = create_provider(cfg)
@@ -9,9 +9,9 @@ def test_factory_creates_rule_based():
 
 
 def test_factory_creates_openai_compatible():
-    from civ_sim.config import ProviderConfig
     from civ_sim.agents.providers.factory import create_provider
     from civ_sim.agents.providers.openai_compat import OpenAICompatibleProvider
+    from civ_sim.config import ProviderConfig
 
     cfg = ProviderConfig(type="openai_compatible", model="test-model")
     provider = create_provider(cfg)
@@ -19,9 +19,9 @@ def test_factory_creates_openai_compatible():
 
 
 def test_factory_creates_anthropic():
-    from civ_sim.config import ProviderConfig
-    from civ_sim.agents.providers.factory import create_provider
     from civ_sim.agents.providers.anthropic_provider import AnthropicProvider
+    from civ_sim.agents.providers.factory import create_provider
+    from civ_sim.config import ProviderConfig
 
     cfg = ProviderConfig(type="anthropic", model="claude-haiku-4-5-20251001")
     provider = create_provider(cfg)
@@ -29,9 +29,9 @@ def test_factory_creates_anthropic():
 
 
 def test_factory_creates_council_provider():
-    from civ_sim.config import ProviderConfig
-    from civ_sim.agents.providers.factory import create_provider
     from civ_sim.agents.providers.council_provider import CouncilProvider
+    from civ_sim.agents.providers.factory import create_provider
+    from civ_sim.config import ProviderConfig
 
     cfg = ProviderConfig(
         type="council",
@@ -44,8 +44,8 @@ def test_factory_creates_council_provider():
 
 
 def test_factory_raises_on_unknown_type():
-    from civ_sim.config import ProviderConfig
     from civ_sim.agents.providers.factory import create_provider
+    from civ_sim.config import ProviderConfig
 
     cfg = ProviderConfig(type="unknown_backend")
     try:

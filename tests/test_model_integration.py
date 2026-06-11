@@ -1,15 +1,14 @@
 """Integration tests for CivModel (simulation/model.py)."""
+
 from __future__ import annotations
 
-import pytest
-from civ_sim.config import SimConfig
-from civ_sim.simulation.model import CivModel
 from civ_sim.agents.city import CityAgent
-
+from civ_sim.simulation.model import CivModel
 
 # ---------------------------------------------------------------------------
 # Constructor tests
 # ---------------------------------------------------------------------------
+
 
 def test_constructor_places_correct_number_of_cities(mini_model):
     """With num_civs=2 and cities_per_civ=1, exactly 2 CityAgents should exist."""
@@ -25,6 +24,7 @@ def test_constructor_creates_two_civilizations(mini_model):
 # ---------------------------------------------------------------------------
 # Step tests
 # ---------------------------------------------------------------------------
+
 
 def test_step_increments_steps(mini_model):
     """Each call to model.step() should increment model.steps by 1."""
@@ -67,6 +67,7 @@ def test_model_stops_at_max_ticks(mini_config):
 # History tests
 # ---------------------------------------------------------------------------
 
+
 def test_history_grows_by_one_entry_per_step(mini_model):
     """Each step() should append exactly one entry to history['tick']."""
     before = len(mini_model.history["tick"])
@@ -99,6 +100,7 @@ def test_history_tracks_wood_and_mineral_stockpiles(mini_model):
 # Aggregate tests
 # ---------------------------------------------------------------------------
 
+
 def test_civilization_aggregates_updated_after_step(mini_model):
     """After step(), each civilization's total_pop and total_military should be >= 0."""
     mini_model.step()
@@ -111,13 +113,13 @@ def test_civilization_aggregates_updated_after_step(mini_model):
 # Stop-condition tests
 # ---------------------------------------------------------------------------
 
+
 def test_model_stops_when_one_civ_eliminated(mini_model):
     """If all cities of one civilization are eliminated, model.running becomes False."""
     # Find the cities belonging to civilization at index 1
     target_civ = mini_model.civilizations[1]
     target_cities = [
-        a for a in mini_model.agents
-        if isinstance(a, CityAgent) and a.civ is target_civ
+        a for a in mini_model.agents if isinstance(a, CityAgent) and a.civ is target_civ
     ]
     assert target_cities, "Need at least one city in civ 1 to eliminate"
 

@@ -1,8 +1,11 @@
-import tempfile, os
+import os
 import sys
+import tempfile
+from unittest.mock import MagicMock, patch
+
 import numpy as np
-from unittest.mock import patch, MagicMock, ANY
-from civ_sim.storage.snapshot import SnapshotWriter, SnapshotReader
+
+from civ_sim.storage.snapshot import SnapshotReader, SnapshotWriter
 from civ_sim.world.resources import ResourceType
 
 
@@ -32,15 +35,20 @@ def test_replay_matplotlib_calls_plt_show():
         mock_anim = MagicMock()
         mock_renderer = MagicMock()
 
-        with patch.dict(sys.modules, {
-            "matplotlib": MagicMock(),
-            "matplotlib.pyplot": mock_plt,
-            "matplotlib.animation": MagicMock(FuncAnimation=mock_anim),
-            "civ_sim.visualization.renderer": MagicMock(Renderer=mock_renderer),
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "matplotlib": MagicMock(),
+                "matplotlib.pyplot": mock_plt,
+                "matplotlib.animation": MagicMock(FuncAnimation=mock_anim),
+                "civ_sim.visualization.renderer": MagicMock(Renderer=mock_renderer),
+            },
+        ):
             # Reload replay module to get mocked imports
             import importlib
+
             import civ_sim.replay as replay
+
             importlib.reload(replay)
 
             replay.plt.show = MagicMock()

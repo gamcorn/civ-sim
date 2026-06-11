@@ -1,4 +1,4 @@
-from civ_sim.replay import _nearest_idx, _apply_key
+from civ_sim.replay import _apply_key, _nearest_idx
 
 
 def test_nearest_idx_exact():

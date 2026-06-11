@@ -1,15 +1,15 @@
 """Tests for CityAgent lifecycle methods: step, _consume_resources, _grow_population, _collapse."""
+
 from __future__ import annotations
 
-import pytest
 from civ_sim.agents.city import CityAgent
 from civ_sim.agents.decisions import ALL_ACTIONS
 from civ_sim.world.resources import ResourceType
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _get_city(mini_model) -> CityAgent:
     """Return the first CityAgent from the mini_model."""
@@ -26,6 +26,7 @@ def _set_food_on_tile(mini_model, city: CityAgent, amount: float) -> None:
 # ---------------------------------------------------------------------------
 # step() — age / last_action / pending_action
 # ---------------------------------------------------------------------------
+
 
 def test_step_increments_age(mini_model):
     city = _get_city(mini_model)
@@ -73,6 +74,7 @@ def test_step_uses_pending_action_when_set(mini_model):
 # _consume_resources()
 # ---------------------------------------------------------------------------
 
+
 def test_consume_resources_reduces_food_stock(mini_model):
     """food_stock decreases after _consume_resources when no food on tile."""
     city = _get_city(mini_model)
@@ -112,6 +114,7 @@ def test_consume_resources_food_stock_never_negative(mini_model):
 # _grow_population()
 # ---------------------------------------------------------------------------
 
+
 def test_grow_population_increases_pop_when_food_sufficient(mini_model):
     """Population grows when the city tile has abundant food."""
     city = _get_city(mini_model)
@@ -138,6 +141,7 @@ def test_grow_population_no_growth_when_food_scarce(mini_model):
 # ---------------------------------------------------------------------------
 # Collapse logic
 # ---------------------------------------------------------------------------
+
 
 def test_step_collapses_city_when_population_zero(mini_model):
     """A city with zero population collapses and is removed from model.agents."""
@@ -181,6 +185,7 @@ def test_population_grows_with_high_food_stock_even_on_drained_tile(mini_model):
     """A city with large food_stock should grow even when its tile is depleted."""
     from civ_sim.agents.city import CityAgent
     from civ_sim.world.resources import ResourceType
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
 
@@ -195,15 +200,16 @@ def test_population_grows_with_high_food_stock_even_on_drained_tile(mini_model):
         city._grow_population()
         if city.population > pop_before:
             break
-    assert city.population > pop_before, (
-        f"City with large stockpile should grow even on empty tile; pop stayed at {pop_before}"
-    )
+    assert (
+        city.population > pop_before
+    ), f"City with large stockpile should grow even on empty tile; pop stayed at {pop_before}"
 
 
 def test_population_does_not_grow_with_empty_stockpile_and_empty_tile(mini_model):
     """A city with empty stock and empty tile should not grow."""
     from civ_sim.agents.city import CityAgent
     from civ_sim.world.resources import ResourceType
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
 

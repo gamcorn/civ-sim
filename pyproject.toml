@@ -51,6 +51,9 @@ omit = [
     "docs/*",
 ]
 
+[tool.isort]
+profile = "black"
+
 [tool.coverage.report]
 show_missing = true
 skip_covered = false

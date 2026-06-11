@@ -1,6 +1,6 @@
 from __future__ import annotations
-import duckdb
 
+import duckdb
 
 CREATE_SQL = """
 CREATE TABLE IF NOT EXISTS events (
@@ -68,10 +68,20 @@ class EventLogger:
         territory: int,
         env_event: str,
     ) -> None:
-        self._buffer.append((
-            tick, self.seed, agent_id, civ_id,
-            action, pop, military, tech_level, territory, env_event,
-        ))
+        self._buffer.append(
+            (
+                tick,
+                self.seed,
+                agent_id,
+                civ_id,
+                action,
+                pop,
+                military,
+                tech_level,
+                territory,
+                env_event,
+            )
+        )
         if len(self._buffer) >= self.flush_interval:
             self.flush()
 
@@ -102,10 +112,15 @@ class EventLogger:
         success: bool,
     ) -> None:
         import json
+
         self._con.execute(
             "INSERT INTO council_sessions VALUES (?,?,?,?,?,?,?,?,?,?)",
             [
-                tick, self.seed, civ_id, emergency, council_off,
+                tick,
+                self.seed,
+                civ_id,
+                emergency,
+                council_off,
                 state_snapshot,
                 json.dumps(sector_outputs),
                 json.dumps(budget_output) if budget_output is not None else None,
@@ -114,8 +129,11 @@ class EventLogger:
             ],
         )
 
-    def log_directive(self, tick: int, civ_id: int, directive, success: bool = True) -> None:
+    def log_directive(
+        self, tick: int, civ_id: int, directive, success: bool = True
+    ) -> None:
         import json
+
         if directive is None:
             self._con.execute(
                 "INSERT INTO directives VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -125,9 +143,13 @@ class EventLogger:
             self._con.execute(
                 "INSERT INTO directives VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 [
-                    tick, civ_id, directive.era_goal,
+                    tick,
+                    civ_id,
+                    directive.era_goal,
                     json.dumps(directive.action_weights),
-                    directive.reasoning, directive.emergency,
-                    directive.issued_at_tick, success,
+                    directive.reasoning,
+                    directive.emergency,
+                    directive.issued_at_tick,
+                    success,
                 ],
             )

@@ -1,7 +1,7 @@
 """Tests for TechEngine — check(), _discover(), _requirements_met()."""
-import pytest
+
 from civ_sim.agents.city import CityAgent
-from civ_sim.technology.discovery import TechEngine, TECH_TREE
+from civ_sim.technology.discovery import TECH_TREE, TechEngine
 from civ_sim.world.resources import ResourceType
 
 
@@ -21,9 +21,11 @@ def _force_resource(mini_model, city, rt: ResourceType, value: float):
 # check() — discovery via check() entry point
 # ---------------------------------------------------------------------------
 
+
 def test_check_discovers_agriculture_when_food_sufficient(mini_model):
     """Agriculture (requires FOOD >= 30) is discovered when food tile is high enough."""
     from civ_sim.technology.discovery import TECH_COSTS
+
     city = _get_city(mini_model)
     city.civ.discovered_techs.clear()
     city.civ.science_points = TECH_COSTS["agriculture"] + 1.0
@@ -53,7 +55,9 @@ def test_check_does_not_rediscover_known_tech(mini_model):
     assert "agriculture" in city.civ.discovered_techs
     # tech_level must not have grown beyond 1 from re-discovering agriculture
     # (it may grow if other techs were also discovered, but agriculture itself wasn't re-added)
-    techs_with_agriculture = {t for t in city.civ.discovered_techs if t == "agriculture"}
+    techs_with_agriculture = {
+        t for t in city.civ.discovered_techs if t == "agriculture"
+    }
     assert len(techs_with_agriculture) == 1
 
 
@@ -79,6 +83,7 @@ def test_check_does_not_discover_without_resources(mini_model):
 # _requirements_met() — unit tests for the inner gate
 # ---------------------------------------------------------------------------
 
+
 def test_requirements_met_false_when_prereq_tech_missing(mini_model):
     """Irrigation requires tech:agriculture; returns False when it's absent."""
     city = _get_city(mini_model)
@@ -98,6 +103,7 @@ def test_requirements_met_false_when_prereq_tech_missing(mini_model):
 def test_requirements_met_true_when_all_met(mini_model):
     """Irrigation returns True when agriculture is discovered and WATER is >= 25."""
     from civ_sim.technology.discovery import TECH_COSTS
+
     city = _get_city(mini_model)
     city.civ.discovered_techs = {"agriculture"}
     city.civ.science_points = TECH_COSTS["irrigation"] + 1.0
@@ -116,6 +122,7 @@ def test_requirements_met_true_when_all_met(mini_model):
 # ---------------------------------------------------------------------------
 # _discover() — direct tests for side effects
 # ---------------------------------------------------------------------------
+
 
 def test_discover_adds_tech_and_increments_level(mini_model):
     """_discover() adds the tech name to discovered_techs and updates tech_level."""
@@ -145,15 +152,16 @@ def test_discover_logs_event_with_discover_prefix(mini_model):
         "SELECT action FROM events WHERE action LIKE 'discover:%'"
     ).fetchall()
     actions = [r[0] for r in rows]
-    assert any("masonry" in a for a in actions), (
-        f"Expected a 'discover:masonry' row, got: {actions}"
-    )
+    assert any(
+        "masonry" in a for a in actions
+    ), f"Expected a 'discover:masonry' row, got: {actions}"
 
 
 def test_food_tech_does_not_mutate_shared_config(mini_model):
     """Discovering agriculture must NOT change model.config.food_regen."""
     from civ_sim.agents.city import CityAgent
     from civ_sim.world.resources import ResourceType
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
     original_regen = mini_model.config.food_regen
@@ -161,18 +169,19 @@ def test_food_tech_does_not_mutate_shared_config(mini_model):
     mini_model.grid.layers[ResourceType.FOOD].data[city.x, city.y] = 100.0
     mini_model.tech_engine._discover("agriculture", city)
 
-    assert mini_model.config.food_regen == original_regen, (
-        "agriculture must not change shared config.food_regen"
-    )
-    assert city.civ.harvest_bonus > 1.0, (
-        "agriculture should raise civ.harvest_bonus instead"
-    )
+    assert (
+        mini_model.config.food_regen == original_regen
+    ), "agriculture must not change shared config.food_regen"
+    assert (
+        city.civ.harvest_bonus > 1.0
+    ), "agriculture should raise civ.harvest_bonus instead"
 
 
 def test_harvest_bonus_increases_gather_yield(mini_model):
     """A civ with harvest_bonus > 1 should gather more food."""
     from civ_sim.agents.city import CityAgent
     from civ_sim.world.resources import ResourceType
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
     mini_model.grid.layers[ResourceType.FOOD].data[:] = 80.0
@@ -189,14 +198,15 @@ def test_harvest_bonus_increases_gather_yield(mini_model):
     city._do_gather()
     boosted = city.food_stock
 
-    assert boosted > baseline * 1.5, (
-        f"harvest_bonus=2 should yield much more food; baseline={baseline:.1f} boosted={boosted:.1f}"
-    )
+    assert (
+        boosted > baseline * 1.5
+    ), f"harvest_bonus=2 should yield much more food; baseline={baseline:.1f} boosted={boosted:.1f}"
 
 
 def test_research_accumulates_science_points(mini_model):
     """Each research action should increase civ.science_points."""
     from civ_sim.agents.city import CityAgent
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
     city.civ.science_points = 0.0
@@ -205,9 +215,9 @@ def test_research_accumulates_science_points(mini_model):
 
     city._do_research()
 
-    assert city.civ.science_points > 0.0, (
-        f"science_points should be > 0 after research; got {city.civ.science_points}"
-    )
+    assert (
+        city.civ.science_points > 0.0
+    ), f"science_points should be > 0 after research; got {city.civ.science_points}"
 
 
 def test_tech_unlocks_when_points_sufficient(mini_model):
@@ -215,6 +225,7 @@ def test_tech_unlocks_when_points_sufficient(mini_model):
     from civ_sim.agents.city import CityAgent
     from civ_sim.technology.discovery import TECH_COSTS
     from civ_sim.world.resources import ResourceType
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
     city.civ.science_points = TECH_COSTS["agriculture"] + 1.0
@@ -222,16 +233,16 @@ def test_tech_unlocks_when_points_sufficient(mini_model):
 
     mini_model.tech_engine.check(city)
 
-    assert "agriculture" in city.civ.discovered_techs, (
-        "Agriculture should be discovered when points sufficient and food threshold met"
-    )
+    assert (
+        "agriculture" in city.civ.discovered_techs
+    ), "Agriculture should be discovered when points sufficient and food threshold met"
 
 
 def test_research_discovers_at_most_one_tech(mini_model):
     """A single research action must discover at most one new technology."""
     from civ_sim.agents.city import CityAgent
-    from civ_sim.technology.discovery import TECH_COSTS
     from civ_sim.world.resources import ResourceType
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
     city.civ.science_points = 10000.0
@@ -244,34 +255,36 @@ def test_research_discovers_at_most_one_tech(mini_model):
     city._do_research()
     techs_after = len(city.civ.discovered_techs)
 
-    assert techs_after - techs_before <= 1, (
-        f"At most 1 tech per research action; discovered {techs_after - techs_before}"
-    )
+    assert (
+        techs_after - techs_before <= 1
+    ), f"At most 1 tech per research action; discovered {techs_after - techs_before}"
 
 
 def test_iron_working_raises_per_civ_military_bonus(mini_model):
     """iron_working discovery must raise civ.military_tech_bonus."""
     from civ_sim.agents.city import CityAgent
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
     bonus_before = city.civ.military_tech_bonus
 
     mini_model.tech_engine._discover("iron_working", city)
 
-    assert city.civ.military_tech_bonus > bonus_before, (
-        f"iron_working should raise military_tech_bonus; was {bonus_before}, now {city.civ.military_tech_bonus}"
-    )
+    assert (
+        city.civ.military_tech_bonus > bonus_before
+    ), f"iron_working should raise military_tech_bonus; was {bonus_before}, now {city.civ.military_tech_bonus}"
 
 
 def test_sailing_raises_per_civ_trade_range(mini_model):
     """sailing discovery must raise civ.trade_range_bonus."""
     from civ_sim.agents.city import CityAgent
+
     cities = [a for a in mini_model.agents if isinstance(a, CityAgent)]
     city = cities[0]
     bonus_before = city.civ.trade_range_bonus
 
     mini_model.tech_engine._discover("sailing", city)
 
-    assert city.civ.trade_range_bonus > bonus_before, (
-        f"sailing should raise trade_range_bonus; was {bonus_before}, now {city.civ.trade_range_bonus}"
-    )
+    assert (
+        city.civ.trade_range_bonus > bonus_before
+    ), f"sailing should raise trade_range_bonus; was {bonus_before}, now {city.civ.trade_range_bonus}"

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -14,24 +15,95 @@ ATTACK = "attack"
 RESEARCH = "research"
 RECRUIT = "recruit"
 CULTIVATE = "cultivate"
-MINE      = "mine"
-WOODCUT   = "woodcut"
+MINE = "mine"
+WOODCUT = "woodcut"
 
-ALL_ACTIONS = [GATHER, TRADE, EXPAND, FORTIFY, ATTACK, RESEARCH, RECRUIT, CULTIVATE, MINE, WOODCUT]
+ALL_ACTIONS = [
+    GATHER,
+    TRADE,
+    EXPAND,
+    FORTIFY,
+    ATTACK,
+    RESEARCH,
+    RECRUIT,
+    CULTIVATE,
+    MINE,
+    WOODCUT,
+]
 
 # Base weights per action for each cultural trait
 # Format: action → {trait → weight}
 _WEIGHTS: dict[str, dict[str, float]] = {
-    GATHER:   {"aggressiveness": -0.1, "trust": 0.1,  "innovation": 0.0,  "tribalism": 0.1,  "risk_tolerance": -0.1},
-    TRADE:    {"aggressiveness": -0.4, "trust": 0.6,  "innovation": 0.1,  "tribalism": -0.2, "risk_tolerance": 0.0},
-    EXPAND:   {"aggressiveness": 0.2,  "trust": 0.0,  "innovation": 0.1,  "tribalism": 0.5,  "risk_tolerance": 0.2},
-    FORTIFY:  {"aggressiveness": 0.3,  "trust": -0.2, "innovation": 0.0,  "tribalism": 0.2,  "risk_tolerance": -0.3},
-    ATTACK:   {"aggressiveness": 0.6,  "trust": -0.5, "innovation": 0.0,  "tribalism": 0.3,  "risk_tolerance": 0.4},
-    RESEARCH: {"aggressiveness": -0.2, "trust": 0.1,  "innovation": 0.7,  "tribalism": 0.0,  "risk_tolerance": 0.1},
-    RECRUIT:  {"aggressiveness": 0.4,  "trust": -0.1, "innovation": -0.1, "tribalism": 0.3,  "risk_tolerance": 0.2},
-    CULTIVATE: {"aggressiveness": -0.2, "trust":  0.2, "innovation": 0.1, "tribalism": 0.3, "risk_tolerance": -0.1},
-    MINE:      {"aggressiveness":  0.1, "trust":  0.0, "innovation": 0.2, "tribalism": 0.2, "risk_tolerance":  0.1},
-    WOODCUT:   {"aggressiveness": -0.1, "trust":  0.1, "innovation": 0.0, "tribalism": 0.2, "risk_tolerance":  0.0},
+    GATHER: {
+        "aggressiveness": -0.1,
+        "trust": 0.1,
+        "innovation": 0.0,
+        "tribalism": 0.1,
+        "risk_tolerance": -0.1,
+    },
+    TRADE: {
+        "aggressiveness": -0.4,
+        "trust": 0.6,
+        "innovation": 0.1,
+        "tribalism": -0.2,
+        "risk_tolerance": 0.0,
+    },
+    EXPAND: {
+        "aggressiveness": 0.2,
+        "trust": 0.0,
+        "innovation": 0.1,
+        "tribalism": 0.5,
+        "risk_tolerance": 0.2,
+    },
+    FORTIFY: {
+        "aggressiveness": 0.3,
+        "trust": -0.2,
+        "innovation": 0.0,
+        "tribalism": 0.2,
+        "risk_tolerance": -0.3,
+    },
+    ATTACK: {
+        "aggressiveness": 0.6,
+        "trust": -0.5,
+        "innovation": 0.0,
+        "tribalism": 0.3,
+        "risk_tolerance": 0.4,
+    },
+    RESEARCH: {
+        "aggressiveness": -0.2,
+        "trust": 0.1,
+        "innovation": 0.7,
+        "tribalism": 0.0,
+        "risk_tolerance": 0.1,
+    },
+    RECRUIT: {
+        "aggressiveness": 0.4,
+        "trust": -0.1,
+        "innovation": -0.1,
+        "tribalism": 0.3,
+        "risk_tolerance": 0.2,
+    },
+    CULTIVATE: {
+        "aggressiveness": -0.2,
+        "trust": 0.2,
+        "innovation": 0.1,
+        "tribalism": 0.3,
+        "risk_tolerance": -0.1,
+    },
+    MINE: {
+        "aggressiveness": 0.1,
+        "trust": 0.0,
+        "innovation": 0.2,
+        "tribalism": 0.2,
+        "risk_tolerance": 0.1,
+    },
+    WOODCUT: {
+        "aggressiveness": -0.1,
+        "trust": 0.1,
+        "innovation": 0.0,
+        "tribalism": 0.2,
+        "risk_tolerance": 0.0,
+    },
 }
 
 
@@ -40,7 +112,8 @@ def get_action_scores(agent: "CityAgent") -> dict[str, float]:
     traits = agent.civ.traits
     t = traits.as_dict()
     return {
-        action: sum(_WEIGHTS[action][k] * t[k] for k in t) + _resource_modifier(action, agent)
+        action: sum(_WEIGHTS[action][k] * t[k] for k in t)
+        + _resource_modifier(action, agent)
         for action in ALL_ACTIONS
     }
 
@@ -97,6 +170,7 @@ def _resource_modifier(action: str, agent: "CityAgent") -> float:
         return military_mod + desperation + defense
     if action == RESEARCH:
         from civ_sim.technology.discovery import TECH_TREE
+
         if len(agent.civ.discovered_techs) >= len(TECH_TREE):
             return -1.0  # nothing left to discover
         return (wood / max_r + min_ratio) * 0.3 - 0.1
@@ -170,15 +244,21 @@ def _feasible(agent: "CityAgent", scores: dict[str, float]) -> dict[str, float]:
     if agent.population > min_pop and agent.mineral_stock >= cfg.recruit_mineral_cost:
         feasible[RECRUIT] = scores[RECRUIT]
 
-    if (CULTIVATE in agent.civ.unlocked_actions
-            and agent.wood_stock >= cfg.cultivate_wood_cost
-            and agent.mineral_stock >= cfg.cultivate_mineral_cost):
+    if (
+        CULTIVATE in agent.civ.unlocked_actions
+        and agent.wood_stock >= cfg.cultivate_wood_cost
+        and agent.mineral_stock >= cfg.cultivate_mineral_cost
+    ):
         feasible[CULTIVATE] = scores[CULTIVATE]
-    if (MINE in agent.civ.unlocked_actions
-            and agent.mineral_stock >= cfg.mine_mineral_cost):
+    if (
+        MINE in agent.civ.unlocked_actions
+        and agent.mineral_stock >= cfg.mine_mineral_cost
+    ):
         feasible[MINE] = scores[MINE]
-    if (WOODCUT in agent.civ.unlocked_actions
-            and agent.wood_stock >= cfg.woodcut_wood_cost):
+    if (
+        WOODCUT in agent.civ.unlocked_actions
+        and agent.wood_stock >= cfg.woodcut_wood_cost
+    ):
         feasible[WOODCUT] = scores[WOODCUT]
 
     return feasible

@@ -1,17 +1,29 @@
 # agents/providers/council_provider.py
 from __future__ import annotations
+
 import asyncio
 import dataclasses
 from typing import TYPE_CHECKING
 
 import openai
 
-from civ_sim.agents.providers.base import DecisionProvider
-from civ_sim.agents.decisions import ALL_ACTIONS, GATHER, get_action_scores, get_feasible_actions
-from civ_sim.agents.providers.council_ministers import (
-    call_sector_minister, call_budget_minister, call_chief, call_chief_lite,
+from civ_sim.agents.decisions import (
+    ALL_ACTIONS,
+    GATHER,
+    get_action_scores,
+    get_feasible_actions,
 )
-from civ_sim.agents.providers.council_prompts import MINISTER_SPECS, build_civ_state_snapshot
+from civ_sim.agents.providers.base import DecisionProvider
+from civ_sim.agents.providers.council_ministers import (
+    call_budget_minister,
+    call_chief,
+    call_chief_lite,
+    call_sector_minister,
+)
+from civ_sim.agents.providers.council_prompts import (
+    MINISTER_SPECS,
+    build_civ_state_snapshot,
+)
 
 if TYPE_CHECKING:
     from civ_sim.agents.city import CityAgent
@@ -40,6 +52,7 @@ class CouncilProvider(DecisionProvider):
             api_key=config.api_key,
         )
         from civ_sim.agents.providers.rule_based import RuleBasedProvider as _RBP
+
         self._fallback = _RBP()
 
     async def choose_actions_batch(self, cities: list["CityAgent"]) -> list[str]:
@@ -91,7 +104,10 @@ class CouncilProvider(DecisionProvider):
         ):
             return True
         # Population collapse
-        if civ._pop_at_last_directive > 0 and civ.total_pop < 0.8 * civ._pop_at_last_directive:
+        if (
+            civ._pop_at_last_directive > 0
+            and civ.total_pop < 0.8 * civ._pop_at_last_directive
+        ):
             return True
         # Tech unlock
         if len(civ.discovered_techs) > civ._techs_at_last_directive:
@@ -117,8 +133,11 @@ class CouncilProvider(DecisionProvider):
         # ── council_off: single chief call, skip minister debate ───────
         if self._config.council_off:
             chief_output = await call_chief_lite(
-                state_snapshot, civ.traits,
-                self._client, chief_model, chief_timeout,
+                state_snapshot,
+                civ.traits,
+                self._client,
+                chief_model,
+                chief_timeout,
                 guided_json=gj,
             )
             self._last_council_tick = tick
@@ -126,16 +145,23 @@ class CouncilProvider(DecisionProvider):
                 if hasattr(model, "logger"):
                     model.logger.log_directive(tick, civ.civ_id, None, success=False)
                     model.logger.log_council_session(
-                        tick, civ.civ_id,
-                        emergency=is_emergency, council_off=True,
+                        tick,
+                        civ.civ_id,
+                        emergency=is_emergency,
+                        council_off=True,
                         state_snapshot=state_snapshot,
-                        sector_outputs=[], budget_output=None,
-                        chief_output=None, success=False,
+                        sector_outputs=[],
+                        budget_output=None,
+                        chief_output=None,
+                        success=False,
                     )
                 return
             directive = StrategicDirective(
                 era_goal="",
-                action_weights={a: float(chief_output["action_weights"].get(a, 0.0)) for a in ALL_ACTIONS},
+                action_weights={
+                    a: float(chief_output["action_weights"].get(a, 0.0))
+                    for a in ALL_ACTIONS
+                },
                 reasoning="",
                 issued_at_tick=tick,
                 valid_for_ticks=self._config.directive_period,
@@ -145,11 +171,15 @@ class CouncilProvider(DecisionProvider):
             if hasattr(model, "logger"):
                 model.logger.log_directive(tick, civ.civ_id, directive)
                 model.logger.log_council_session(
-                    tick, civ.civ_id,
-                    emergency=is_emergency, council_off=True,
+                    tick,
+                    civ.civ_id,
+                    emergency=is_emergency,
+                    council_off=True,
                     state_snapshot=state_snapshot,
-                    sector_outputs=[], budget_output=None,
-                    chief_output=chief_output, success=True,
+                    sector_outputs=[],
+                    budget_output=None,
+                    chief_output=chief_output,
+                    success=True,
                 )
             self._update_civ_snapshot(civ, cities, tick, is_emergency)
             return
@@ -159,24 +189,44 @@ class CouncilProvider(DecisionProvider):
         for _round in range(1, self._config.max_rounds + 1):
             prev = (
                 [f"{o['name']}: {o.get('recommendation', '')}" for o in sector_outputs]
-                if sector_outputs else None
+                if sector_outputs
+                else None
             )
-            results = await asyncio.gather(*[
-                call_sector_minister(
-                    spec, state_snapshot, civ.traits,
-                    self._client, sector_model, timeout, prev, gj,
-                )
-                for spec in MINISTER_SPECS
-            ], return_exceptions=True)
+            results = await asyncio.gather(
+                *[
+                    call_sector_minister(
+                        spec,
+                        state_snapshot,
+                        civ.traits,
+                        self._client,
+                        sector_model,
+                        timeout,
+                        prev,
+                        gj,
+                    )
+                    for spec in MINISTER_SPECS
+                ],
+                return_exceptions=True,
+            )
             sector_outputs = [r for r in results if isinstance(r, dict)]
 
         budget_output = await call_budget_minister(
-            state_snapshot, sector_outputs, civ.traits,
-            self._client, sector_model, timeout, gj,
+            state_snapshot,
+            sector_outputs,
+            civ.traits,
+            self._client,
+            sector_model,
+            timeout,
+            gj,
         )
         chief_output = await call_chief(
-            state_snapshot, sector_outputs, budget_output, civ.traits,
-            self._client, chief_model, chief_timeout,
+            state_snapshot,
+            sector_outputs,
+            budget_output,
+            civ.traits,
+            self._client,
+            chief_model,
+            chief_timeout,
             round_num=self._config.max_rounds,
             max_rounds=self._config.max_rounds,
             guided_json=gj,
@@ -192,18 +242,24 @@ class CouncilProvider(DecisionProvider):
             if hasattr(model, "logger"):
                 model.logger.log_directive(tick, civ.civ_id, None, success=False)
                 model.logger.log_council_session(
-                    tick, civ.civ_id,
-                    emergency=is_emergency, council_off=False,
+                    tick,
+                    civ.civ_id,
+                    emergency=is_emergency,
+                    council_off=False,
                     state_snapshot=state_snapshot,
                     sector_outputs=sector_outputs,
                     budget_output=budget_output,
-                    chief_output=None, success=False,
+                    chief_output=None,
+                    success=False,
                 )
             return
 
         directive = StrategicDirective(
             era_goal=chief_output.get("era_goal", ""),
-            action_weights={a: float(chief_output["action_weights"].get(a, 0.0)) for a in ALL_ACTIONS},
+            action_weights={
+                a: float(chief_output["action_weights"].get(a, 0.0))
+                for a in ALL_ACTIONS
+            },
             reasoning=chief_output.get("reasoning", ""),
             issued_at_tick=tick,
             valid_for_ticks=self._config.directive_period,
@@ -218,12 +274,15 @@ class CouncilProvider(DecisionProvider):
         if hasattr(model, "logger"):
             model.logger.log_directive(tick, civ.civ_id, directive)
             model.logger.log_council_session(
-                tick, civ.civ_id,
-                emergency=is_emergency, council_off=False,
+                tick,
+                civ.civ_id,
+                emergency=is_emergency,
+                council_off=False,
                 state_snapshot=state_snapshot,
                 sector_outputs=sector_outputs,
                 budget_output=budget_output,
-                chief_output=chief_output, success=True,
+                chief_output=chief_output,
+                success=True,
             )
 
     def _synthesize_from_sectors(self, sector_outputs: list[dict]) -> dict | None:
@@ -243,12 +302,18 @@ class CouncilProvider(DecisionProvider):
         n = max(1, len(sector_outputs))
         return {
             "era_goal": "",
-            "action_weights": {a: max(-1.0, min(1.0, merged.get(a, 0.0) / n)) for a in ALL_ACTIONS},
+            "action_weights": {
+                a: max(-1.0, min(1.0, merged.get(a, 0.0) / n)) for a in ALL_ACTIONS
+            },
             "reasoning": "synthesized from sector weights (chief failed)",
         }
 
     def _update_civ_snapshot(
-        self, civ: "Civilization", cities: list["CityAgent"], tick: int, is_emergency: bool
+        self,
+        civ: "Civilization",
+        cities: list["CityAgent"],
+        tick: int,
+        is_emergency: bool,
     ) -> None:
         if is_emergency:
             self._last_emergency_tick = tick
@@ -257,6 +322,7 @@ class CouncilProvider(DecisionProvider):
         civ._city_count_at_last_directive = len(cities)
 
     def _apply_directive(self, city: "CityAgent") -> str:
+        assert self._directive is not None
         scores = get_action_scores(city)
         for action, weight in self._directive.action_weights.items():
             if action in scores:

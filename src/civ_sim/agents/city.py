@@ -1,13 +1,23 @@
 from __future__ import annotations
+
 import math
 from typing import TYPE_CHECKING
 
 from mesa.discrete_space import Grid2DMovingAgent
 
 from civ_sim.agents.decisions import (
-    choose_action, GATHER, TRADE, EXPAND, FORTIFY, ATTACK, RESEARCH, RECRUIT,
-    CULTIVATE, MINE, WOODCUT,
-    _attack_target, _has_unclaimed_neighbor,
+    ATTACK,
+    CULTIVATE,
+    EXPAND,
+    FORTIFY,
+    GATHER,
+    MINE,
+    RECRUIT,
+    RESEARCH,
+    TRADE,
+    WOODCUT,
+    _attack_target,
+    choose_action,
 )
 from civ_sim.world.resources import ResourceType
 
@@ -36,9 +46,11 @@ class CityAgent(Grid2DMovingAgent):
         self._pending_action: str | None = None
         self._settle_cooldown: int = 0  # ticks until this city can settle again
         self._disease_hit_ticks: int = 0  # ticks remaining to show disease overlay
-        self.fortification: float = 0.0  # defensive structures (built by fortify, decays)
-        self.farmer_ratio:     float = 0.0
-        self.miner_ratio:      float = 0.0
+        self.fortification: float = (
+            0.0  # defensive structures (built by fortify, decays)
+        )
+        self.farmer_ratio: float = 0.0
+        self.miner_ratio: float = 0.0
         self.woodcutter_ratio: float = 0.0
 
         # Claim starting tile
@@ -54,7 +66,11 @@ class CityAgent(Grid2DMovingAgent):
         if self.population <= 0:
             self._collapse()
             return
-        action = self._pending_action if self._pending_action is not None else choose_action(self)
+        action = (
+            self._pending_action
+            if self._pending_action is not None
+            else choose_action(self)
+        )
         self._pending_action = None
         self._execute(action)
         self.last_action = action
@@ -66,15 +82,23 @@ class CityAgent(Grid2DMovingAgent):
     def _consume_resources(self) -> None:
         cfg = self.model.config
         # Passive harvest from the city tile (3 < regen 4/tick so tile stays positive)
-        self.food_stock += self.model.grid.consume(self.x, self.y, ResourceType.FOOD, 3.0)
-        self.wood_stock += self.model.grid.consume(self.x, self.y, ResourceType.WOOD, 1.5)
-        self.mineral_stock += self.model.grid.consume(self.x, self.y, ResourceType.MINERALS, 1.0)
+        self.food_stock += self.model.grid.consume(
+            self.x, self.y, ResourceType.FOOD, 3.0
+        )
+        self.wood_stock += self.model.grid.consume(
+            self.x, self.y, ResourceType.WOOD, 1.5
+        )
+        self.mineral_stock += self.model.grid.consume(
+            self.x, self.y, ResourceType.MINERALS, 1.0
+        )
 
         # Labor-based production (post-tech; no-op if no techs discovered)
         self._produce_labor()
 
         # Consumption from stockpile
-        needed = self.population * cfg.food_per_person + self.military * cfg.military_upkeep
+        needed = (
+            self.population * cfg.food_per_person + self.military * cfg.military_upkeep
+        )
         self.food_stock = max(0.0, self.food_stock - needed)
 
         # Starvation when stockpile is empty
@@ -83,14 +107,20 @@ class CityAgent(Grid2DMovingAgent):
             self.population = max(0, self.population - loss)
 
         # Wood upkeep
-        wood_needed = self.population * cfg.wood_per_person + self.military * cfg.wood_per_military
+        wood_needed = (
+            self.population * cfg.wood_per_person
+            + self.military * cfg.wood_per_military
+        )
         self.wood_stock = max(0.0, self.wood_stock - wood_needed)
         if self.wood_stock == 0.0 and wood_needed > 0:
             loss = int(math.ceil(self.population * cfg.wood_shortage_rate))
             self.population = max(0, self.population - loss)
 
         # Mineral upkeep
-        mineral_needed = self.population * cfg.mineral_per_person + self.military * cfg.mineral_per_military
+        mineral_needed = (
+            self.population * cfg.mineral_per_person
+            + self.military * cfg.mineral_per_military
+        )
         self.mineral_stock = max(0.0, self.mineral_stock - mineral_needed)
         if self.mineral_stock == 0.0 and mineral_needed > 0:
             decay_f = self.military * cfg.mineral_shortage_rate
@@ -107,7 +137,9 @@ class CityAgent(Grid2DMovingAgent):
         self.military = max(0, self.military - decay)
 
         # Fortification erodes slowly each tick
-        self.fortification = max(0.0, self.fortification * (1.0 - self.model.config.fortification_decay))
+        self.fortification = max(
+            0.0, self.fortification * (1.0 - self.model.config.fortification_decay)
+        )
 
     def _grow_population(self) -> None:
         cfg = self.model.config
@@ -174,14 +206,14 @@ class CityAgent(Grid2DMovingAgent):
                 nx, ny = self.x + dx, self.y + dy
                 if 0 <= nx < grid.width and 0 <= ny < grid.height:
                     if grid.ownership[nx, ny] == self.civ.civ_id:
-                        raw_food  = grid.consume(nx, ny, ResourceType.FOOD,     3.0)
-                        raw_water = grid.consume(nx, ny, ResourceType.WATER,    1.0)
-                        raw_wood  = grid.consume(nx, ny, ResourceType.WOOD,     1.0)
-                        raw_mins  = grid.consume(nx, ny, ResourceType.MINERALS, 0.5)
+                        raw_food = grid.consume(nx, ny, ResourceType.FOOD, 3.0)
+                        raw_water = grid.consume(nx, ny, ResourceType.WATER, 1.0)
+                        raw_wood = grid.consume(nx, ny, ResourceType.WOOD, 1.0)
+                        raw_mins = grid.consume(nx, ny, ResourceType.MINERALS, 0.5)
                         # Track raw work (tile extraction), apply bonus to output
                         work_done += raw_food + raw_water + raw_wood + raw_mins
-                        self.food_stock    += (raw_food + raw_water * 0.5) * bonus
-                        self.wood_stock    += raw_wood * bonus
+                        self.food_stock += (raw_food + raw_water * 0.5) * bonus
+                        self.wood_stock += raw_wood * bonus
                         self.mineral_stock += raw_mins * bonus
 
     def _do_trade(self) -> None:
@@ -200,7 +232,10 @@ class CityAgent(Grid2DMovingAgent):
 
         best: "CityAgent | None" = None
         for _, other in candidates:
-            if self.model.get_relation(self.civ.civ_id, other.civ.civ_id) >= cfg.trade_relation_threshold:
+            if (
+                self.model.get_relation(self.civ.civ_id, other.civ.civ_id)
+                >= cfg.trade_relation_threshold
+            ):
                 best = other
                 break
         if best is None:
@@ -225,7 +260,9 @@ class CityAgent(Grid2DMovingAgent):
         best.food_stock += food_offer * 0.9
         best.mineral_stock -= mineral_price
         self.mineral_stock += mineral_price * 0.9
-        self.model.update_relation(self.civ.civ_id, best.civ.civ_id, cfg.trade_relation_bonus)
+        self.model.update_relation(
+            self.civ.civ_id, best.civ.civ_id, cfg.trade_relation_bonus
+        )
 
     def _do_expand(self) -> None:
         """Claim an adjacent unclaimed tile with the best resource value."""
@@ -237,13 +274,17 @@ class CityAgent(Grid2DMovingAgent):
                 nx, ny = self.x + dx, self.y + dy
                 if 0 <= nx < grid.width and 0 <= ny < grid.height:
                     if grid.ownership[nx, ny] == -1:
-                        val = (grid.get(nx, ny, ResourceType.FOOD) +
-                               grid.get(nx, ny, ResourceType.MINERALS) * 2)
+                        val = (
+                            grid.get(nx, ny, ResourceType.FOOD)
+                            + grid.get(nx, ny, ResourceType.MINERALS) * 2
+                        )
                         if val > best_val:
                             best_val = val
                             best_tile = (nx, ny)
         if best_tile:
-            self.wood_stock = max(0.0, self.wood_stock - self.model.config.expand_wood_cost)
+            self.wood_stock = max(
+                0.0, self.wood_stock - self.model.config.expand_wood_cost
+            )
             grid.claim(*best_tile, self.civ.civ_id)
 
     def _do_fortify(self) -> None:
@@ -264,7 +305,9 @@ class CityAgent(Grid2DMovingAgent):
             return
 
         self.mineral_stock = max(0.0, self.mineral_stock - cfg.attack_mineral_cost)
-        self.model.update_relation(self.civ.civ_id, target.civ.civ_id, -cfg.attack_relation_penalty)
+        self.model.update_relation(
+            self.civ.civ_id, target.civ.civ_id, -cfg.attack_relation_penalty
+        )
 
         fort_factor = min(1.0, target.fortification / cfg.max_fortification)
         damage_factor = 1.0 - fort_factor * cfg.fortify_defense_bonus
@@ -278,7 +321,9 @@ class CityAgent(Grid2DMovingAgent):
 
         if self.model.random.random() < win_prob:
             # Attacker takes proportional losses from enemy resistance (Lanchester)
-            attacker_loss = max(1, int(self.military * (enemy_str / (my_str + enemy_str + 1e-6)) * 0.3))
+            attacker_loss = max(
+                1, int(self.military * (enemy_str / (my_str + enemy_str + 1e-6)) * 0.3)
+            )
             pre_loss_military = self.military
             self.military = max(0, self.military - attacker_loss)
             # Defender damage uses pre-casualty attacker strength (simultaneous exchange)
@@ -286,14 +331,17 @@ class CityAgent(Grid2DMovingAgent):
             target.population = max(0, target.population - int(target.population * 0.2))
 
             raid_f = cfg.battle_pillage_rate * damage_factor
-            target.food_stock    = max(0.0, target.food_stock    * (1.0 - raid_f))
-            target.wood_stock    = max(0.0, target.wood_stock    * (1.0 - raid_f))
+            target.food_stock = max(0.0, target.food_stock * (1.0 - raid_f))
+            target.wood_stock = max(0.0, target.wood_stock * (1.0 - raid_f))
             target.mineral_stock = max(0.0, target.mineral_stock * (1.0 - raid_f))
 
             for dx in range(-1, 2):
                 for dy in range(-1, 2):
                     nx, ny = target.x + dx, target.y + dy
-                    if 0 <= nx < self.model.grid.width and 0 <= ny < self.model.grid.height:
+                    if (
+                        0 <= nx < self.model.grid.width
+                        and 0 <= ny < self.model.grid.height
+                    ):
                         if self.model.grid.ownership[nx, ny] == target.civ.civ_id:
                             self.model.grid.claim(nx, ny, self.civ.civ_id)
 
@@ -306,15 +354,19 @@ class CityAgent(Grid2DMovingAgent):
         """Transfer a weakened enemy city to this civilization."""
         cfg = self.model.config
 
-        self.food_stock    += target.food_stock
-        self.wood_stock    += target.wood_stock
+        self.food_stock += target.food_stock
+        self.wood_stock += target.wood_stock
         self.mineral_stock += target.mineral_stock
-        target.food_stock    = 0.0
-        target.wood_stock    = 0.0
+        target.food_stock = 0.0
+        target.wood_stock = 0.0
         target.mineral_stock = 0.0
 
-        self.wood_stock    = max(0.0, self.wood_stock    - cfg.capture_reconstruct_wood    * damage_factor)
-        self.mineral_stock = max(0.0, self.mineral_stock - cfg.capture_reconstruct_mineral * damage_factor)
+        self.wood_stock = max(
+            0.0, self.wood_stock - cfg.capture_reconstruct_wood * damage_factor
+        )
+        self.mineral_stock = max(
+            0.0, self.mineral_stock - cfg.capture_reconstruct_mineral * damage_factor
+        )
 
         enemy_civ_id = target.civ.civ_id
         target.civ = self.civ
@@ -330,7 +382,9 @@ class CityAgent(Grid2DMovingAgent):
             territory=self.model.grid.territory_count(self.civ.civ_id),
             env_event="",
         )
-        self.model.update_relation(self.civ.civ_id, enemy_civ_id, -self.model.config.capture_relation_penalty)
+        self.model.update_relation(
+            self.civ.civ_id, enemy_civ_id, -self.model.config.capture_relation_penalty
+        )
 
     def _maybe_settle(self) -> None:
         """Found a daughter city when population hits the cap and cooldown has elapsed."""
@@ -341,7 +395,8 @@ class CityAgent(Grid2DMovingAgent):
         if self.population < cfg.pop_cap:
             return
         civ_city_count = sum(
-            1 for a in self.model.agents
+            1
+            for a in self.model.agents
             if isinstance(a, CityAgent) and a.civ is self.civ
         )
         if civ_city_count >= cfg.max_cities_per_civ:
@@ -351,13 +406,13 @@ class CityAgent(Grid2DMovingAgent):
             return
         settler_pop = cfg.initial_pop // 2
         self.population -= settler_pop
-        self.wood_stock    = max(0.0, self.wood_stock    - cfg.settle_wood_cost)
+        self.wood_stock = max(0.0, self.wood_stock - cfg.settle_wood_cost)
         self.mineral_stock = max(0.0, self.mineral_stock - cfg.settle_mineral_cost)
         self._settle_cooldown = cfg.settle_cooldown
         new_city = CityAgent(self.model, self.civ, pos[0], pos[1])
         new_city.population = settler_pop
         new_city.food_stock = 20.0
-        new_city.wood_stock    = cfg.initial_wood_stock * 0.5
+        new_city.wood_stock = cfg.initial_wood_stock * 0.5
         new_city.mineral_stock = cfg.initial_mineral_stock * 0.5
         # Drain food from surrounding tiles — land clearing stresses local resources
         r = 3
@@ -366,7 +421,9 @@ class CityAgent(Grid2DMovingAgent):
                 nx, ny = pos[0] + dx, pos[1] + dy
                 if 0 <= nx < self.model.grid.width and 0 <= ny < self.model.grid.height:
                     current = self.model.grid.get(nx, ny, ResourceType.FOOD)
-                    self.model.grid.consume(nx, ny, ResourceType.FOOD, current * cfg.settle_land_drain)
+                    self.model.grid.consume(
+                        nx, ny, ResourceType.FOOD, current * cfg.settle_land_drain
+                    )
         self.model.logger.log_event(
             tick=self.model.steps,
             agent_id=str(new_city.unique_id),
@@ -388,14 +445,18 @@ class CityAgent(Grid2DMovingAgent):
 
         # Accumulate science points, scaled by innovation trait
         innovation = self.civ.traits.innovation
-        points = (wood_spent * cfg.science_per_wood + mineral_spent * cfg.science_per_mineral) * (0.5 + innovation)
+        points = (
+            wood_spent * cfg.science_per_wood + mineral_spent * cfg.science_per_mineral
+        ) * (0.5 + innovation)
         self.civ.science_points += points
 
         self.model.tech_engine.check(self)
 
     def _do_recruit(self) -> None:
         cfg = self.model.config
-        pop_available = self.population - cfg.initial_pop  # keep initial_pop as civilians
+        pop_available = (
+            self.population - cfg.initial_pop
+        )  # keep initial_pop as civilians
         pop_drafted = min(pop_available, cfg.recruit_pop_cost)
         if pop_drafted <= 0:
             return
@@ -410,9 +471,9 @@ class CityAgent(Grid2DMovingAgent):
 
     def _shift_labor_ratio(self, role: str, delta: float) -> None:
         ratios = {
-            "farmer":      self.farmer_ratio,
-            "miner":       self.miner_ratio,
-            "woodcutter":  self.woodcutter_ratio,
+            "farmer": self.farmer_ratio,
+            "miner": self.miner_ratio,
+            "woodcutter": self.woodcutter_ratio,
         }
         ratios[role] = min(1.0, ratios[role] + delta)
         total = sum(ratios.values())
@@ -420,8 +481,8 @@ class CityAgent(Grid2DMovingAgent):
             for k in ratios:
                 if k != role:
                     ratios[k] *= (1.0 - ratios[role]) / (total - ratios[role] + 1e-9)
-        self.farmer_ratio     = ratios["farmer"]
-        self.miner_ratio      = ratios["miner"]
+        self.farmer_ratio = ratios["farmer"]
+        self.miner_ratio = ratios["miner"]
         self.woodcutter_ratio = ratios["woodcutter"]
 
     def _produce_labor(self) -> None:
@@ -457,19 +518,28 @@ class CityAgent(Grid2DMovingAgent):
                     civ.civ_id, self.x, self.y, cfg.harvest_radius
                 )
                 self.wood_stock += (
-                    woodcutters * (avg_forest / 100.0) * civ.forestry_efficiency * cfg.work_rate
+                    woodcutters
+                    * (avg_forest / 100.0)
+                    * civ.forestry_efficiency
+                    * cfg.work_rate
                 )
 
         grid.apply_labor_degradation(
-            self.x, self.y, cfg.harvest_radius, civ.civ_id,
-            self.farmer_ratio, self.miner_ratio, self.woodcutter_ratio, cfg,
+            self.x,
+            self.y,
+            cfg.harvest_radius,
+            civ.civ_id,
+            self.farmer_ratio,
+            self.miner_ratio,
+            self.woodcutter_ratio,
+            cfg,
         )
 
     def _do_cultivate(self) -> None:
         cfg = self.model.config
-        wood_spent    = min(self.wood_stock,    cfg.cultivate_wood_cost)
+        wood_spent = min(self.wood_stock, cfg.cultivate_wood_cost)
         mineral_spent = min(self.mineral_stock, cfg.cultivate_mineral_cost)
-        self.wood_stock    -= wood_spent
+        self.wood_stock -= wood_spent
         self.mineral_stock -= mineral_spent
         self._shift_labor_ratio("farmer", cfg.labor_ratio_delta)
 
@@ -499,4 +569,3 @@ class CityAgent(Grid2DMovingAgent):
             env_event="",
         )
         self.remove()
-

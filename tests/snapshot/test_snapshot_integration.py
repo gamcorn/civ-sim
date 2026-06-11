@@ -1,5 +1,8 @@
-import tempfile, os
+import os
+import tempfile
+
 import duckdb
+
 from civ_sim.config import SimConfig
 from civ_sim.simulation.model import CivModel
 
@@ -10,8 +13,14 @@ def test_snapshot_written_every_n_ticks():
     os.unlink(db_path)  # Remove empty file so DuckDB can create fresh DB
     try:
         cfg = SimConfig(
-            rng_seed=42, max_ticks=10, width=20, height=15,
-            cities_per_civ=1, snapshot_interval=5, db_path=db_path, visualize=False,
+            rng_seed=42,
+            max_ticks=10,
+            width=20,
+            height=15,
+            cities_per_civ=1,
+            snapshot_interval=5,
+            db_path=db_path,
+            visualize=False,
         )
         model = CivModel(cfg)
         for _ in range(10):
@@ -19,9 +28,10 @@ def test_snapshot_written_every_n_ticks():
                 model.step()
 
         con = duckdb.connect(db_path)
-        ticks = [r[0] for r in con.execute(
-            "SELECT tick FROM snapshots ORDER BY tick"
-        ).fetchall()]
+        ticks = [
+            r[0]
+            for r in con.execute("SELECT tick FROM snapshots ORDER BY tick").fetchall()
+        ]
         con.close()
         # Must have snapped at multiples of 5: 5 and 10 (or fewer if sim ended early)
         assert len(ticks) >= 1
@@ -37,8 +47,14 @@ def test_no_snapshot_when_interval_zero():
     os.unlink(db_path)  # Remove empty file so DuckDB can create fresh DB
     try:
         cfg = SimConfig(
-            rng_seed=42, max_ticks=5, width=20, height=15,
-            cities_per_civ=1, snapshot_interval=0, db_path=db_path, visualize=False,
+            rng_seed=42,
+            max_ticks=5,
+            width=20,
+            height=15,
+            cities_per_civ=1,
+            snapshot_interval=0,
+            db_path=db_path,
+            visualize=False,
         )
         model = CivModel(cfg)
         for _ in range(5):

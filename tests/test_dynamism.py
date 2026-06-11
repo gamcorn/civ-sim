@@ -1,16 +1,21 @@
-import math
-import numpy as np
 import pytest
+
+from civ_sim.agents.city import CityAgent
 from civ_sim.config import SimConfig
 from civ_sim.simulation.model import CivModel
-from civ_sim.agents.city import CityAgent
 
 
 @pytest.fixture
 def mini_config():
     return SimConfig(
-        width=20, height=20, num_civs=2, cities_per_civ=1,
-        max_ticks=5, rng_seed=0, db_path=":memory:", visualize=False,
+        width=20,
+        height=20,
+        num_civs=2,
+        cities_per_civ=1,
+        max_ticks=5,
+        rng_seed=0,
+        db_path=":memory:",
+        visualize=False,
     )
 
 
@@ -42,9 +47,9 @@ def test_apply_disease_reduces_all_city_populations(mini_config):
     model._apply_disease()
 
     for city in cities:
-        assert city.population < pops_before[city.unique_id], (
-            f"City {city.unique_id} population should have dropped after disease"
-        )
+        assert (
+            city.population < pops_before[city.unique_id]
+        ), f"City {city.unique_id} population should have dropped after disease"
 
 
 def test_border_tiles_revert_with_probability_one(mini_config):
@@ -68,4 +73,6 @@ def test_apply_disease_does_not_kill_city(mini_config):
     city = next(a for a in model.agents if isinstance(a, CityAgent))
     city.population = 1
     model._apply_disease()
-    assert city.population == 1, "Disease should not kill a city outright (clamped to 1)"
+    assert (
+        city.population == 1
+    ), "Disease should not kill a city outright (clamped to 1)"

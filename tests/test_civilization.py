@@ -1,18 +1,25 @@
 import random
-import pytest
-from civ_sim.agents.civilization import CulturalTraits, Civilization
 from unittest.mock import MagicMock
+
+from civ_sim.agents.civilization import Civilization, CulturalTraits
 
 
 def test_cultural_traits_as_dict_has_all_keys():
     t = CulturalTraits()
     d = t.as_dict()
-    assert set(d.keys()) == {"aggressiveness", "trust", "innovation", "tribalism", "risk_tolerance"}
+    assert set(d.keys()) == {
+        "aggressiveness",
+        "trust",
+        "innovation",
+        "tribalism",
+        "risk_tolerance",
+    }
 
 
 def test_cultural_traits_mutate_returns_new_instance():
-    t = CulturalTraits(aggressiveness=0.5, trust=0.5, innovation=0.5,
-                       tribalism=0.5, risk_tolerance=0.5)
+    t = CulturalTraits(
+        aggressiveness=0.5, trust=0.5, innovation=0.5, tribalism=0.5, risk_tolerance=0.5
+    )
     rng = random.Random(42)
     mutated = t.mutate(rng, sigma=0.05)
     assert mutated is not t
@@ -20,8 +27,13 @@ def test_cultural_traits_mutate_returns_new_instance():
 
 
 def test_cultural_traits_mutate_values_are_clamped():
-    t = CulturalTraits(aggressiveness=0.99, trust=0.01, innovation=0.5,
-                       tribalism=0.5, risk_tolerance=0.5)
+    t = CulturalTraits(
+        aggressiveness=0.99,
+        trust=0.01,
+        innovation=0.5,
+        tribalism=0.5,
+        risk_tolerance=0.5,
+    )
     rng = random.Random(0)
     for _ in range(50):
         m = t.mutate(rng, sigma=0.5)
