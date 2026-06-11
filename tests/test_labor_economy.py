@@ -374,3 +374,54 @@ def test_gather_still_feasible_after_agriculture():
     city.civ.unlocked_actions = {"cultivate"}
     feasible = get_feasible_actions(city)
     assert GATHER in feasible
+
+
+from civ_sim.agents.providers.council_prompts import (
+    build_civ_state_snapshot,
+    CHIEF_SCHEMA_DICT,
+    CHIEF_LITE_SCHEMA_DICT,
+    MINISTER_SPECS,
+)
+
+
+def test_state_snapshot_includes_labor_block(mini_model):
+    city = _get_city(mini_model)
+    city.farmer_ratio = 0.3
+    city.miner_ratio = 0.2
+    city.woodcutter_ratio = 0.1
+    cities = [city]
+    snapshot = build_civ_state_snapshot(city.civ, cities, mini_model)
+    assert "Labor allocation" in snapshot
+    assert "farmers" in snapshot
+    assert "miners" in snapshot
+    assert "woodcutters" in snapshot
+
+
+def test_state_snapshot_includes_soil_stats(mini_model):
+    city = _get_city(mini_model)
+    cities = [city]
+    snapshot = build_civ_state_snapshot(city.civ, cities, mini_model)
+    assert "soil fertility" in snapshot
+    assert "mineral richness" in snapshot
+    assert "forest density" in snapshot
+
+
+def test_chief_schema_includes_new_actions():
+    required = CHIEF_SCHEMA_DICT["properties"]["action_weights"]["required"]
+    assert "cultivate" in required
+    assert "mine" in required
+    assert "woodcut" in required
+
+
+def test_chief_lite_schema_includes_new_actions():
+    required = CHIEF_LITE_SCHEMA_DICT["properties"]["action_weights"]["required"]
+    assert "cultivate" in required
+    assert "mine" in required
+    assert "woodcut" in required
+
+
+def test_economy_minister_has_new_actions():
+    economy = next(s for s in MINISTER_SPECS if s["name"] == "Minister of Economy")
+    assert "cultivate" in economy["actions"]
+    assert "mine" in economy["actions"]
+    assert "woodcut" in economy["actions"]

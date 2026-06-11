@@ -18,8 +18,8 @@ MINISTER_SPECS: list[dict] = [
     },
     {
         "name": "Minister of Economy",
-        "domain": "food stocks, trade, and resource management",
-        "actions": ["gather", "trade"],
+        "domain": "food stocks, trade, resource management, and labor allocation",
+        "actions": ["gather", "trade", "cultivate", "mine", "woodcut"],
         "trait_key": "trust",
     },
     {
@@ -98,14 +98,19 @@ BUDGET_SCHEMA = json.dumps({
 }, indent=2)
 
 # veto_overridden removed — simplifies output for smaller models
+_ALL_ACTIONS = [
+    "gather", "trade", "expand", "fortify", "attack",
+    "research", "recruit", "cultivate", "mine", "woodcut",
+]
+
 CHIEF_SCHEMA_DICT = {
     "type": "object",
     "properties": {
         "era_goal": {"type": "string"},
         "action_weights": {
             "type": "object",
-            "properties": {a: {"type": "number"} for a in ["gather", "trade", "expand", "fortify", "attack", "research", "recruit"]},
-            "required": ["gather", "trade", "expand", "fortify", "attack", "research", "recruit"],
+            "properties": {a: {"type": "number"} for a in _ALL_ACTIONS},
+            "required": _ALL_ACTIONS,
         },
         "reasoning": {"type": "string"},
     },
@@ -113,10 +118,7 @@ CHIEF_SCHEMA_DICT = {
 }
 CHIEF_SCHEMA = json.dumps({
     "era_goal": "one sentence strategy",
-    "action_weights": {
-        "gather": 0.0, "trade": 0.0, "expand": 0.0,
-        "fortify": 0.0, "attack": 0.0, "research": 0.0, "recruit": 0.0,
-    },
+    "action_weights": {a: 0.0 for a in _ALL_ACTIONS},
     "reasoning": "brief synthesis",
 }, indent=2)
 
@@ -126,17 +128,14 @@ CHIEF_LITE_SCHEMA_DICT = {
     "properties": {
         "action_weights": {
             "type": "object",
-            "properties": {a: {"type": "number"} for a in ["gather", "trade", "expand", "fortify", "attack", "research", "recruit"]},
-            "required": ["gather", "trade", "expand", "fortify", "attack", "research", "recruit"],
+            "properties": {a: {"type": "number"} for a in _ALL_ACTIONS},
+            "required": _ALL_ACTIONS,
         },
     },
     "required": ["action_weights"],
 }
 CHIEF_LITE_SCHEMA = json.dumps({
-    "action_weights": {
-        "gather": 0.0, "trade": 0.0, "expand": 0.0,
-        "fortify": 0.0, "attack": 0.0, "research": 0.0, "recruit": 0.0,
-    },
+    "action_weights": {a: 0.0 for a in _ALL_ACTIONS},
 }, indent=2)
 
 
@@ -200,6 +199,22 @@ def build_civ_state_snapshot(
     total_wood = sum(model.grid.get(c.x, c.y, ResourceType.WOOD) for c in cities)
     techs = ", ".join(sorted(civ.discovered_techs)) or "none"
 
+    avg_farmer     = sum(c.farmer_ratio     for c in cities) / len(cities)
+    avg_miner      = sum(c.miner_ratio      for c in cities) / len(cities)
+    avg_woodcutter = sum(c.woodcutter_ratio for c in cities) / len(cities)
+    avg_soil = sum(
+        model.grid.avg_soil_fertility(civ.civ_id, c.x, c.y, model.config.harvest_radius)
+        for c in cities
+    ) / len(cities)
+    avg_richness = sum(
+        model.grid.avg_mineral_richness(civ.civ_id, c.x, c.y, model.config.harvest_radius)
+        for c in cities
+    ) / len(cities)
+    avg_forest = sum(
+        model.grid.avg_forest_density(civ.civ_id, c.x, c.y, model.config.harvest_radius)
+        for c in cities
+    ) / len(cities)
+
     own_block = (
         f"Turn: {model.steps}\n"
         f"Civilization: {civ.name}\n"
@@ -207,6 +222,8 @@ def build_civ_state_snapshot(
         f"Avg food stock: {avg_food:.1f}  Minerals (cities): {total_minerals:.0f}"
         f"  Wood (cities): {total_wood:.0f}\n"
         f"Tech level: {civ.tech_level}  Technologies: {techs}\n"
+        f"Labor allocation: farmers {avg_farmer:.0%} | miners {avg_miner:.0%} | woodcutters {avg_woodcutter:.0%}\n"
+        f"Avg soil fertility: {avg_soil:.1f} | mineral richness: {avg_richness:.1f} | forest density: {avg_forest:.1f}\n"
         f"Territory: {model.grid.territory_count(civ.civ_id)} tiles"
     )
 

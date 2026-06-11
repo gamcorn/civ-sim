@@ -120,6 +120,9 @@ def make_mock_city(
     city.x = 10
     city.y = 10
     city._pending_action = None
+    city.farmer_ratio = 0.0
+    city.miner_ratio = 0.0
+    city.woodcutter_ratio = 0.0
 
     return city
 
