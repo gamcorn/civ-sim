@@ -101,6 +101,15 @@ class SimConfig:
     climate_shift_prob: float = 0.002
     # Border dynamics
     border_reversion_prob: float = 0.02
+    # Labor economy
+    cultivate_wood_cost:    float = 3.0
+    cultivate_mineral_cost: float = 2.0
+    mine_mineral_cost:      float = 3.0
+    woodcut_wood_cost:      float = 2.0
+    labor_ratio_delta:      float = 0.05
+    degradation_rate:       float = 0.002
+    recovery_rate:          float = 0.001
+    land_productivity_max:  float = 3.0
     # Diplomatic relations
     relation_decay: float = 0.002           # per-tick decay toward 0
     trade_relation_bonus: float = 0.05      # relations gain per trade

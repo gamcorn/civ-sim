@@ -1,3 +1,5 @@
+import random as _random_module
+
 import numpy as np
 import opensimplex
 from mesa.discrete_space import OrthogonalMooreGrid, PropertyLayer
@@ -56,11 +58,32 @@ class ResourceGrid:
 
         self.ownership = self.xp.full((width, height), -1, dtype=self.xp.int8)
 
+        # Permanent soil-quality layers (Perlin-seeded, independent from resource buffers)
+        # Use a dedicated sub-RNG seeded deterministically from config so we
+        # consume zero draws from the shared random sequence (preserving
+        # reproducibility of all downstream RNG-dependent code).
+        soil_seed = getattr(config, "rng_seed", 0) ^ 0xDEADBEEF
+        soil_rng = _random_module.Random(soil_seed)
+        self.base_soil_fertility   = self._perlin_map_raw(0.05, soil_rng)
+        self.soil_fertility        = self.base_soil_fertility.copy()
+        self.base_mineral_richness = self._perlin_map_raw(0.09, soil_rng)
+        self.mineral_richness      = self.base_mineral_richness.copy()
+        self.base_forest_density   = self._perlin_map_raw(0.04, soil_rng)
+        self.forest_density        = self.base_forest_density.copy()
+
     def _perlin_map(self, rt: ResourceType, random) -> np.ndarray:
         # Always generate on CPU with numpy (opensimplex is CPU-only)
         seed = random.randint(0, 2**30)
         opensimplex.seed(seed)
         scale = NOISE_SCALE[rt]
+        xs = np.arange(self.width) * scale
+        ys = np.arange(self.height) * scale
+        raw = opensimplex.noise2array(xs, ys).T
+        return ((raw + 1.0) / 2.0 * self.config.resource_max).astype(np.float32)
+
+    def _perlin_map_raw(self, scale: float, random) -> np.ndarray:
+        seed = random.randint(0, 2**30)
+        opensimplex.seed(seed)
         xs = np.arange(self.width) * scale
         ys = np.arange(self.height) * scale
         raw = opensimplex.noise2array(xs, ys).T
@@ -101,3 +124,69 @@ class ResourceGrid:
 
     def territory_count(self, civ_id: int) -> int:
         return int(self.xp.sum(self.ownership == civ_id))
+
+    def _owned_tiles_in_radius(
+        self, civ_id: int, cx: int, cy: int, radius: int
+    ) -> list[tuple[int, int]]:
+        tiles = []
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                nx, ny = cx + dx, cy + dy
+                if 0 <= nx < self.width and 0 <= ny < self.height:
+                    if int(self.ownership[nx, ny]) == civ_id:
+                        tiles.append((nx, ny))
+        return tiles
+
+    def avg_soil_fertility(self, civ_id: int, cx: int, cy: int, radius: int) -> float:
+        tiles = self._owned_tiles_in_radius(civ_id, cx, cy, radius)
+        if not tiles:
+            return 0.0
+        return float(np.mean([self.soil_fertility[x, y] for x, y in tiles]))
+
+    def avg_mineral_richness(self, civ_id: int, cx: int, cy: int, radius: int) -> float:
+        tiles = self._owned_tiles_in_radius(civ_id, cx, cy, radius)
+        if not tiles:
+            return 0.0
+        return float(np.mean([self.mineral_richness[x, y] for x, y in tiles]))
+
+    def avg_forest_density(self, civ_id: int, cx: int, cy: int, radius: int) -> float:
+        tiles = self._owned_tiles_in_radius(civ_id, cx, cy, radius)
+        if not tiles:
+            return 0.0
+        return float(np.mean([self.forest_density[x, y] for x, y in tiles]))
+
+    def apply_labor_degradation(
+        self,
+        cx: int, cy: int, radius: int, civ_id: int,
+        farmer_ratio: float, miner_ratio: float, woodcutter_ratio: float,
+        config,
+    ) -> None:
+        dr = config.degradation_rate
+        rr = config.recovery_rate
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                nx, ny = cx + dx, cy + dy
+                if 0 <= nx < self.width and 0 <= ny < self.height:
+                    if int(self.ownership[nx, ny]) == civ_id:
+                        self.soil_fertility[nx, ny] = max(
+                            0.0,
+                            float(self.soil_fertility[nx, ny]) - dr * farmer_ratio,
+                        )
+                        self.mineral_richness[nx, ny] = max(
+                            0.0,
+                            float(self.mineral_richness[nx, ny]) - dr * miner_ratio,
+                        )
+                        self.forest_density[nx, ny] = max(
+                            0.0,
+                            float(self.forest_density[nx, ny]) - dr * woodcutter_ratio,
+                        )
+                        # Fallow recovery toward base
+                        self.soil_fertility[nx, ny] += rr * (
+                            float(self.base_soil_fertility[nx, ny]) - float(self.soil_fertility[nx, ny])
+                        )
+                        self.mineral_richness[nx, ny] += rr * (
+                            float(self.base_mineral_richness[nx, ny]) - float(self.mineral_richness[nx, ny])
+                        )
+                        self.forest_density[nx, ny] += rr * (
+                            float(self.base_forest_density[nx, ny]) - float(self.forest_density[nx, ny])
+                        )
