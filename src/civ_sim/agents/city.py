@@ -430,7 +430,7 @@ class CityAgent(Grid2DMovingAgent):
         civ = self.civ
         civilian_pop = self.population - self.military
 
-        if "agriculture" in civ.discovered_techs and self.farmer_ratio > 0:
+        if "cultivate" in civ.unlocked_actions and self.farmer_ratio > 0:
             farmers = int(civilian_pop * self.farmer_ratio)
             if farmers > 0:
                 avg_fert = grid.avg_soil_fertility(
@@ -440,7 +440,7 @@ class CityAgent(Grid2DMovingAgent):
                     farmers * (avg_fert / 100.0) * civ.land_productivity * cfg.work_rate
                 )
 
-        if "mining" in civ.discovered_techs and self.miner_ratio > 0:
+        if "mine" in civ.unlocked_actions and self.miner_ratio > 0:
             miners = int(civilian_pop * self.miner_ratio)
             if miners > 0:
                 avg_rich = grid.avg_mineral_richness(
@@ -450,7 +450,7 @@ class CityAgent(Grid2DMovingAgent):
                     miners * (avg_rich / 100.0) * civ.mining_efficiency * cfg.work_rate
                 )
 
-        if "forestry" in civ.discovered_techs and self.woodcutter_ratio > 0:
+        if "woodcut" in civ.unlocked_actions and self.woodcutter_ratio > 0:
             woodcutters = int(civilian_pop * self.woodcutter_ratio)
             if woodcutters > 0:
                 avg_forest = grid.avg_forest_density(

@@ -109,7 +109,7 @@ class SimConfig:
     labor_ratio_delta:      float = 0.05
     degradation_rate:       float = 0.002
     recovery_rate:          float = 0.001
-    land_productivity_max:  float = 3.0
+    efficiency_max:  float = 3.0
     # Diplomatic relations
     relation_decay: float = 0.002           # per-tick decay toward 0
     trade_relation_bonus: float = 0.05      # relations gain per trade

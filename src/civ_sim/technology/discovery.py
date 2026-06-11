@@ -104,17 +104,17 @@ class TechEngine:
             civ.trade_range_bonus += effects["trade_range"]
         if "land_productivity" in effects:
             civ.land_productivity = min(
-                cfg.land_productivity_max,
+                cfg.efficiency_max,
                 civ.land_productivity + effects["land_productivity"],
             )
         if "mining_efficiency" in effects:
             civ.mining_efficiency = min(
-                cfg.land_productivity_max,
+                cfg.efficiency_max,
                 civ.mining_efficiency + effects["mining_efficiency"],
             )
         if "forestry_efficiency" in effects:
             civ.forestry_efficiency = min(
-                cfg.land_productivity_max,
+                cfg.efficiency_max,
                 civ.forestry_efficiency + effects["forestry_efficiency"],
             )
         if "unlock" in effects:

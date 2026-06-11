@@ -193,9 +193,9 @@ def test_forestry_raises_forestry_efficiency(mini_model):
 
 def test_land_productivity_caps_at_max(mini_model):
     city = _get_city(mini_model)
-    city.civ.land_productivity = mini_model.config.land_productivity_max - 0.01
+    city.civ.land_productivity = mini_model.config.efficiency_max - 0.01
     mini_model.tech_engine._discover("agriculture", city)
-    assert city.civ.land_productivity <= mini_model.config.land_productivity_max
+    assert city.civ.land_productivity <= mini_model.config.efficiency_max
 
 
 def test_city_has_labor_ratio_fields(mini_model):
@@ -291,6 +291,9 @@ def test_produce_labor_no_output_without_tech(mini_model):
     city.civ.discovered_techs.discard("agriculture")
     city.civ.discovered_techs.discard("mining")
     city.civ.discovered_techs.discard("forestry")
+    city.civ.unlocked_actions.discard("cultivate")
+    city.civ.unlocked_actions.discard("mine")
+    city.civ.unlocked_actions.discard("woodcut")
     city.farmer_ratio = 0.8
     city.miner_ratio = 0.1
     city.woodcutter_ratio = 0.1
