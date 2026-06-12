@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 from typing import TYPE_CHECKING, Any
 
 import matplotlib
 import numpy as np
 
-if not os.environ.get("DISPLAY"):
-    os.environ["DISPLAY"] = ":0"
-matplotlib.use("TkAgg")
-import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
-from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
+_has_display = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+matplotlib.use("TkAgg" if _has_display else "Agg")
+import matplotlib.gridspec as gridspec  # noqa: E402
+import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.cm import ScalarMappable  # noqa: E402
+from matplotlib.colors import Normalize  # noqa: E402
 
 if TYPE_CHECKING:
     from civ_sim.simulation.model import CivModel
@@ -30,6 +30,31 @@ _MAP_COLORS: dict[int, tuple] = {
 }
 # Line/scatter colors for up to 4 civs
 _CIV_LINE_COLORS = ["#5599ff", "#ff5555", "#44cc55", "#cc44ff"]
+
+
+def _city_fill_radius(pop: int) -> float:
+    """Circle radius for a city marker, scaled by population; minimum 0.3 data units."""
+    return 0.3 + 1.2 * math.sqrt(pop / 200)
+
+
+def _city_wall_linewidth(military: int) -> float:
+    """Ring linewidth scaled by military strength; clamped to [0.5, 4.0]."""
+    return min(4.0, max(0.5, 0.5 + 3.5 * math.log1p(military) / math.log1p(1000)))
+
+
+def _compute_threat(cities: list, width: int, height: int) -> np.ndarray:
+    """Gaussian threat heatmap centred on each city weighted by military; shape (width, height)."""
+    threat = np.zeros((width, height), dtype=float)
+    sigma = 5.0
+    xs = np.arange(width)
+    ys = np.arange(height)
+    xx, yy = np.meshgrid(xs, ys, indexing="ij")
+    for city in cities:
+        if city.military <= 0:
+            continue
+        dist_sq = (xx - city.x) ** 2 + (yy - city.y) ** 2
+        threat += city.military * np.exp(-dist_sq / (2 * sigma**2))
+    return threat
 
 
 class Renderer:
