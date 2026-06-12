@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import logging
 from typing import TYPE_CHECKING
 
 import openai
@@ -29,6 +30,8 @@ if TYPE_CHECKING:
     from civ_sim.agents.city import CityAgent
     from civ_sim.agents.civilization import Civilization
     from civ_sim.config import ProviderConfig
+
+logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
@@ -75,14 +78,47 @@ class CouncilProvider(DecisionProvider):
         self, civ: "Civilization", cities: list["CityAgent"], tick: int
     ) -> bool:
         if self._directive is None:
+            logger.debug(
+                "No directive exists; running council for civ %d at tick %d",
+                civ.civ_id,
+                tick,
+            )
             return True
         if tick - self._last_council_tick >= self._config.directive_period:
+            logger.debug(
+                "Directive period elapsed; running council for civ %d at tick %d",
+                civ.civ_id,
+                tick,
+            )
             return True
         if not self._config.emergency_triggers:
+            logger.debug(
+                "Emergency triggers disabled; skipping council for civ %d at tick %d",
+                civ.civ_id,
+                tick,
+            )
             return False
         if tick - self._last_emergency_tick < self._config.emergency_cooldown_ticks:
+            logger.debug(
+                "Emergency cooldown active; skipping council for civ %d at tick %d",
+                civ.civ_id,
+                tick,
+            )
             return False
-        return self._check_emergencies(civ, cities)
+        should_run = self._check_emergencies(civ, cities)
+        if should_run:
+            logger.debug(
+                "Emergency detected; running council for civ %d at tick %d",
+                civ.civ_id,
+                tick,
+            )
+        else:
+            logger.debug(
+                "No emergency detected; skipping council for civ %d at tick %d",
+                civ.civ_id,
+                tick,
+            )
+        return should_run
 
     def _check_emergencies(
         self, civ: "Civilization", cities: list["CityAgent"]
@@ -117,6 +153,7 @@ class CouncilProvider(DecisionProvider):
     async def _run_council(
         self, civ: "Civilization", cities: list["CityAgent"], tick: int
     ) -> None:
+        logger.info("Council session starting for civ %d at tick %d", civ.civ_id, tick)
         is_emergency = (
             self._directive is not None
             and tick - self._last_council_tick < self._config.directive_period
@@ -142,6 +179,11 @@ class CouncilProvider(DecisionProvider):
             )
             self._last_council_tick = tick
             if chief_output is None:
+                logger.warning(
+                    "Council returned no directive (council_off); falling back to rule-based for civ %d at tick %d",
+                    civ.civ_id,
+                    tick,
+                )
                 if hasattr(model, "logger"):
                     model.logger.log_directive(tick, civ.civ_id, None, success=False)
                     model.logger.log_council_session(
@@ -168,6 +210,11 @@ class CouncilProvider(DecisionProvider):
                 emergency=is_emergency,
             )
             self._directive = directive
+            logger.debug(
+                "Council produced directive for civ %d at tick %d (council_off)",
+                civ.civ_id,
+                tick,
+            )
             if hasattr(model, "logger"):
                 model.logger.log_directive(tick, civ.civ_id, directive)
                 model.logger.log_council_session(
@@ -239,6 +286,11 @@ class CouncilProvider(DecisionProvider):
             chief_output = self._synthesize_from_sectors(sector_outputs)
 
         if chief_output is None:
+            logger.warning(
+                "Council returned no directive; falling back to rule-based for civ %d at tick %d",
+                civ.civ_id,
+                tick,
+            )
             if hasattr(model, "logger"):
                 model.logger.log_directive(tick, civ.civ_id, None, success=False)
                 model.logger.log_council_session(
@@ -266,6 +318,9 @@ class CouncilProvider(DecisionProvider):
             emergency=is_emergency,
         )
         self._directive = directive
+        logger.debug(
+            "Council produced directive for civ %d at tick %d", civ.civ_id, tick
+        )
         if is_emergency:
             self._last_emergency_tick = tick
 
@@ -322,7 +377,11 @@ class CouncilProvider(DecisionProvider):
         civ._city_count_at_last_directive = len(cities)
 
     def _apply_directive(self, city: "CityAgent") -> str:
-        assert self._directive is not None
+        if self._directive is None:
+            logger.error(
+                "_apply_directive called without active directive; defaulting to GATHER"
+            )
+            return "gather"
         scores = get_action_scores(city)
         for action, weight in self._directive.action_weights.items():
             if action in scores:
