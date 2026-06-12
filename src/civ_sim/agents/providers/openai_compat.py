@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import TYPE_CHECKING
 
 import openai
@@ -8,6 +9,8 @@ import openai
 from civ_sim.agents.decisions import choose_action, get_feasible_actions
 from civ_sim.agents.providers.base import DecisionProvider
 from civ_sim.agents.providers.prompt import SYSTEM_PROMPT, build_prompt, parse_response
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from civ_sim.agents.city import CityAgent
@@ -75,7 +78,13 @@ class OpenAICompatibleProvider(DecisionProvider):
             )
             raw = response.choices[0].message.content or ""
             return parse_response(raw, feasible, fallback)
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "Chat API call failed for city %s (civ %s): %s",
+                city.unique_id,
+                city.civ.name,
+                exc,
+            )
             return fallback
 
     # ------------------------------------------------------------------
@@ -111,5 +120,8 @@ class OpenAICompatibleProvider(DecisionProvider):
                 parse_response(choice.text, feas, fb)
                 for choice, feas, fb in zip(response.choices, feasibles, fallbacks)
             ]
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "Batch completions call failed for %d cities: %s", len(cities), exc
+            )
             return fallbacks

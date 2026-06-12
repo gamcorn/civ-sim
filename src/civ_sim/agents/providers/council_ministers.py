@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
 import openai
@@ -29,6 +30,8 @@ from civ_sim.agents.providers.council_prompts import (
 
 if TYPE_CHECKING:
     from civ_sim.agents.civilization import CulturalTraits
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_json_safe(raw: str) -> dict[str, Any] | None:
@@ -58,6 +61,9 @@ def _parse_json_safe(raw: str) -> dict[str, Any] | None:
     # Extract the outermost {...} blob — model may have prefixed with residual text
     last_brace = text.rfind("}")
     if last_brace == -1:
+        logger.debug(
+            "JSON parse failed: no closing brace in response (len=%d)", len(raw)
+        )
         return None
     text = text[: last_brace + 1]
     pos = text.rfind("{")
@@ -69,6 +75,9 @@ def _parse_json_safe(raw: str) -> dict[str, Any] | None:
         except json.JSONDecodeError:
             pass
         pos = text.rfind("{", 0, pos)
+    logger.debug(
+        "JSON parse failed: no valid JSON object found in response (len=%d)", len(raw)
+    )
     return None
 
 
@@ -83,7 +92,7 @@ async def _call_llm(
     max_tokens: int,
     guided_json: dict | None = None,
 ) -> dict[str, Any] | None:
-    extra: dict = {}
+    extra: dict[str, Any] = {}
     if guided_json is not None:
         extra["extra_body"] = {"guided_json": guided_json}
     try:
@@ -102,7 +111,8 @@ async def _call_llm(
         )
         raw = resp.choices[0].message.content or ""
         return _parse_json_safe(raw)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Council LLM call failed (model=%s): %s", model, exc)
         return None
 
 
