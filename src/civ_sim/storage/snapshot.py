@@ -2,11 +2,17 @@ from __future__ import annotations
 
 import bisect
 import json
+import logging
 from dataclasses import dataclass
 from types import SimpleNamespace
 
 import duckdb
 import numpy as np
+
+from civ_sim.agents.city import CityAgent
+from civ_sim.world.resources import ResourceType
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # DuckDB schema
@@ -93,9 +99,6 @@ class SnapshotWriter:
         self._con.execute(_CREATE_SQL)
 
     def write(self, tick: int, grid, agents, civilizations) -> None:
-        from civ_sim.agents.city import CityAgent
-        from civ_sim.world.resources import ResourceType
-
         ownership = np.asarray(grid.ownership).astype(np.int8)
         food = np.asarray(grid.layers[ResourceType.FOOD].data).astype(np.float32)
 
@@ -140,6 +143,7 @@ class SnapshotWriter:
                 json.dumps(civs_data),
             ),
         )
+        logger.debug("Snapshot written at tick %d", tick)
 
     def close(self) -> None:
         self._con.close()
@@ -169,8 +173,6 @@ class SnapshotReader:
             return []
 
     def load(self, tick: int) -> ReplayFrame:
-        from civ_sim.world.resources import ResourceType
-
         row = self._con.execute(
             "SELECT ownership, food, width, height, resource_max, cities, civs "
             "FROM snapshots WHERE tick = ?",
@@ -179,6 +181,8 @@ class SnapshotReader:
 
         if row is None:
             raise KeyError(f"No snapshot found for tick {tick}")
+
+        logger.debug("Snapshot loaded for tick %d", tick)
 
         w, h = row[2], row[3]
         resource_max = float(row[4])

@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import json
+import logging
+
 import duckdb
+
+logger = logging.getLogger(__name__)
 
 CREATE_SQL = """
 CREATE TABLE IF NOT EXISTS events (
@@ -47,7 +52,7 @@ CREATE TABLE IF NOT EXISTS council_sessions (
 
 
 class EventLogger:
-    def __init__(self, db_path: str, seed: int, flush_interval: int = 10):
+    def __init__(self, db_path: str, seed: int, flush_interval: int = 10) -> None:
         self.seed = seed
         self.flush_interval = flush_interval
         self._buffer: list[tuple] = []
@@ -55,6 +60,7 @@ class EventLogger:
         self._con.execute(CREATE_SQL)
         self._con.execute(CREATE_DIRECTIVES_SQL)
         self._con.execute(CREATE_COUNCIL_SQL)
+        logger.info("EventLogger connected: db=%s seed=%d", db_path, seed)
 
     def log_event(
         self,
@@ -88,15 +94,18 @@ class EventLogger:
     def flush(self) -> None:
         if not self._buffer:
             return
+        n = len(self._buffer)
         self._con.executemany(
             "INSERT INTO events VALUES (?,?,?,?,?,?,?,?,?,?)",
             self._buffer,
         )
         self._buffer.clear()
+        logger.debug("Flushed %d events to DB", n)
 
     def close(self) -> None:
         self.flush()
         self._con.close()
+        logger.info("EventLogger closed")
 
     def log_council_session(
         self,
@@ -111,8 +120,6 @@ class EventLogger:
         chief_output: dict | None,
         success: bool,
     ) -> None:
-        import json
-
         self._con.execute(
             "INSERT INTO council_sessions VALUES (?,?,?,?,?,?,?,?,?,?)",
             [
@@ -132,8 +139,6 @@ class EventLogger:
     def log_directive(
         self, tick: int, civ_id: int, directive, success: bool = True
     ) -> None:
-        import json
-
         if directive is None:
             self._con.execute(
                 "INSERT INTO directives VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
