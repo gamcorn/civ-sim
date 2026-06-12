@@ -110,6 +110,7 @@ duckdb results.duckdb "SELECT action, count(*) FROM events GROUP BY action ORDER
 | `--workers INT` | 0 | Ray worker processes for sweep (0 = one per CPU core) |
 | `--grid-backend STR` | numpy | Array backend for resource grid: `numpy` or `cupy` |
 | `--snapshot-interval INT` | 0 | Write a world snapshot every N ticks for later replay (0 = off) |
+| `--log-level STR` | INFO | Logging verbosity written to `civ_sim.log`: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
 
 ---
 

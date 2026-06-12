@@ -159,6 +159,24 @@ civ_providers:
   - type: rule_based
 ```
 
+## Logging
+
+Every module uses `logging.getLogger(__name__)`. Logs are written to `civ_sim.log` in the working directory when `--log-level` is passed:
+
+```bash
+.venv/bin/python -m civ_sim --seed 42 --ticks 500 --no-visualize --log-level DEBUG
+```
+
+Format: `2026-01-01T12:00:00  INFO      civ_sim.simulation.model  CivModel initialised: seed=42 civs=2 size=80x60`
+
+**Level guide:**
+- `DEBUG` — every tick, action choices, council decisions, JSON parse attempts
+- `INFO` — city founded/captured/settled, tech discoveries, disease events, sweep progress
+- `WARNING` — LLM API failures (fallback to rule-based), worker timeouts, council fallbacks
+- `ERROR` — assert-replacement guards (should never fire in normal operation)
+
+The root logger level and handler are configured in `__main__._configure_logging()`. If no `--log-level` is passed, no file handler is attached (silent).
+
 ## vLLM on DGX Spark
 
 ```bash
