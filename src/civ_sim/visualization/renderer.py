@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from typing import TYPE_CHECKING, Any
 
@@ -16,6 +17,8 @@ from matplotlib.colors import Normalize
 
 if TYPE_CHECKING:
     from civ_sim.simulation.model import CivModel
+
+logger = logging.getLogger(__name__)
 
 # Territory map colors per civ_id (-1 = unclaimed)
 _MAP_COLORS: dict[int, tuple] = {
@@ -35,6 +38,12 @@ class Renderer:
     def __init__(self, model: "CivModel"):
         self.model = model
         len(model.civilizations)
+
+        logger.info(
+            "Renderer initialised: width=%d height=%d",
+            model.config.width,
+            model.config.height,
+        )
 
         self.fig = plt.figure(figsize=(24, 13))
         self.fig.patch.set_facecolor("#1a1a2e")

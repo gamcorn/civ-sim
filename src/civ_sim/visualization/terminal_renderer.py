@@ -6,6 +6,7 @@ using cursor positioning to minimise flicker.
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from collections import Counter
@@ -15,6 +16,8 @@ import numpy as np
 
 if TYPE_CHECKING:
     from civ_sim.simulation.model import CivModel
+
+logger = logging.getLogger(__name__)
 
 # ANSI helpers
 _RESET = "\033[0m"
@@ -83,6 +86,12 @@ class TerminalRenderer:
         self.scale_y = max(1, model.config.height // map_rows)
         self.map_cols = model.config.width // self.scale_x
         self.map_rows = model.config.height // self.scale_y
+
+        logger.info(
+            "Renderer initialised: width=%d height=%d",
+            model.config.width,
+            model.config.height,
+        )
 
         sys.stdout.write("\033[2J\033[H")
         sys.stdout.flush()
