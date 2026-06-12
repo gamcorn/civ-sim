@@ -119,7 +119,7 @@ class SimConfig:
     capture_relation_penalty: float = 0.5  # relations loss on city capture
     trade_relation_threshold: float = -0.5  # below this, trade is blocked
     # Cultural trait init ranges: (min, max)
-    trait_range: tuple = (0.1, 0.9)
+    trait_range: tuple[float, float] = (0.1, 0.9)
     # Logging
     db_path: str = "results.duckdb"
     db_flush_interval: int = 10
@@ -127,7 +127,7 @@ class SimConfig:
     # Visualization
     visualize: bool = True
     viz_interval_ms: int = 100
-    civ_providers: list = field(
+    civ_providers: list[ProviderConfig] = field(
         default_factory=lambda: [ProviderConfig(), ProviderConfig()]
     )
     # Intel quality for council providers (0 = perfect, 1 = very noisy)
