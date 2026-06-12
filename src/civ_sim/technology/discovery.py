@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from civ_sim.agents.city import CityAgent
 
 from civ_sim.world.resources import ResourceType
+
+logger = logging.getLogger(__name__)
 
 # Each entry: tech_name → {prerequisite_tech_or_resource: threshold}
 # String keys prefixed with "tech:" mean a discovered tech is required.
@@ -79,6 +82,12 @@ class TechEngine:
         """Check if the city's civilization can discover any new tech (at most one per call)."""
         civ = city.civ
         grid = city.model.grid
+        logger.debug(
+            "Tech check for civ %s (science=%.1f techs=%d)",
+            civ.name,
+            civ.science_points,
+            len(civ.discovered_techs),
+        )
 
         for tech, reqs in TECH_TREE.items():
             if tech in civ.discovered_techs:
@@ -134,6 +143,14 @@ class TechEngine:
             )
         if "unlock" in effects:
             civ.unlocked_actions.add(effects["unlock"])
+
+        logger.info(
+            "Civ %s discovered tech '%s' (level %d, science_points remaining=%.1f)",
+            civ.name,
+            tech,
+            civ.tech_level,
+            civ.science_points,
+        )
 
         city.model.logger.log_event(
             tick=city.model.steps,
