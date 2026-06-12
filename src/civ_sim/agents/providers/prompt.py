@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from civ_sim.agents.city import CityAgent
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = (
     "You are the strategic advisor for a city in a civilization simulation.\n"
@@ -52,7 +55,16 @@ def build_prompt(city: "CityAgent", feasible_actions: list[str]) -> str:
 def parse_response(text: str, feasible: list[str], fallback: str) -> str:
     """Extract the first word from LLM text; return fallback if not in feasible set."""
     if not text or not text.strip():
+        logger.debug("Empty LLM response; using fallback=%s", fallback)
         return fallback
     first_word = text.strip().lower().split()[0]
     cleaned = re.sub(r"[^\w]", "", first_word)
-    return cleaned if cleaned in feasible else fallback
+    if cleaned not in feasible:
+        logger.debug(
+            "LLM response %r not in feasible set %s; using fallback=%s",
+            cleaned,
+            feasible,
+            fallback,
+        )
+        return fallback
+    return cleaned

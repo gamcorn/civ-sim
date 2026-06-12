@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from civ_sim.agents.city import CityAgent
     from civ_sim.agents.civilization import Civilization, CulturalTraits
     from civ_sim.simulation.model import CivModel
+
+logger = logging.getLogger(__name__)
 
 
 MINISTER_SPECS: list[dict] = [
