@@ -1,3 +1,4 @@
+import logging
 import random as _random_module
 
 import numpy as np
@@ -5,6 +6,8 @@ import opensimplex
 from mesa.discrete_space import OrthogonalMooreGrid, PropertyLayer
 
 from .resources import NOISE_SCALE, ResourceType
+
+logger = logging.getLogger(__name__)
 
 
 def _load_backend(name: str):
@@ -14,11 +17,13 @@ def _load_backend(name: str):
     Raises ValueError for unknown values so misconfiguration is caught early.
     """
     if name == "numpy":
+        logger.debug("Using numpy array backend")
         return np
     if name == "cupy":
         try:
             import cupy  # ty: ignore[unresolved-import]
 
+            logger.info("Using CuPy GPU array backend")
             return cupy
         except ImportError as exc:
             raise ImportError(
@@ -69,6 +74,10 @@ class ResourceGrid:
         self.mineral_richness = self.base_mineral_richness.copy()
         self.base_forest_density = self._perlin_map_raw(0.04, soil_rng)
         self.forest_density = self.base_forest_density.copy()
+
+        logger.info(
+            "ResourceGrid initialised: %dx%d backend=%s", width, height, backend_name
+        )
 
     def _perlin_map(self, rt: ResourceType, random) -> np.ndarray:
         # Always generate on CPU with numpy (opensimplex is CPU-only)
