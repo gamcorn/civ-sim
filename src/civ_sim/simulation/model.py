@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import math
+from collections import defaultdict
+from typing import Any
 
 import mesa
 import numpy as np
@@ -14,6 +17,8 @@ from civ_sim.technology.discovery import TechEngine
 from civ_sim.world.events import EventSampler
 from civ_sim.world.grid import ResourceGrid
 from civ_sim.world.resources import ResourceType
+
+logger = logging.getLogger(__name__)
 
 
 class CivModel(mesa.Model):
@@ -73,11 +78,20 @@ class CivModel(mesa.Model):
         # Diplomatic relations between civ pairs
         self.relations: dict[tuple[int, int], float] = {}
 
+        logger.info(
+            "CivModel initialised: seed=%d civs=%d size=%dx%d",
+            config.rng_seed,
+            config.num_civs,
+            config.width,
+            config.height,
+        )
+
     # ------------------------------------------------------------------
 
     def step(
         self,
     ) -> None:  # ty: ignore[invalid-method-override]  # Mesa PEP-695 generics
+        logger.debug("Tick %d starting", self.steps)
         self._attack_events = []
 
         # Compute climate penalty for this tick's regen BEFORE grid.step().
@@ -102,6 +116,11 @@ class CivModel(mesa.Model):
 
         disease_events = [e for e in events if e.name == "disease"]
         if disease_events:
+            logger.info(
+                "Disease event at tick %d beta=%.2f",
+                self.steps,
+                disease_events[0].transmission_rate,
+            )
             self._apply_disease(beta=disease_events[0].transmission_rate)
 
         # 4. Dispatch all decisions (LLM async batch, rule-based sync)
@@ -184,6 +203,11 @@ class CivModel(mesa.Model):
         alive = [c for c in self.civilizations if c.alive]
         if len(alive) <= 1 or self.steps >= self.config.max_ticks:
             self.running = False
+            logger.info(
+                "Simulation ended at tick %d: %s",
+                self.steps,
+                "one civ remains" if len(alive) <= 1 else "max ticks reached",
+            )
             self.logger.close()
             if self._snapshot_writer:
                 self._snapshot_writer.close()
@@ -193,11 +217,7 @@ class CivModel(mesa.Model):
 
     async def _dispatch_decisions(self) -> None:
         """Batch all city decisions by provider, run LLM providers concurrently."""
-        from collections import defaultdict
-
-        from civ_sim.agents.city import CityAgent
-
-        by_provider: dict = defaultdict(list)
+        by_provider: defaultdict[Any, list] = defaultdict(list)
         for agent in self.agents:
             if isinstance(agent, CityAgent):
                 by_provider[agent.civ.provider].append(agent)
