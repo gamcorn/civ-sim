@@ -8,10 +8,27 @@ Usage:
 """
 
 import argparse
+import logging
 import os
-import sys
+from pathlib import Path
 
 from civ_sim.config import SimConfig
+
+logger = logging.getLogger(__name__)
+
+
+def _configure_logging(level_name: str) -> None:
+    level = getattr(logging, level_name.upper(), logging.INFO)
+    handler = logging.FileHandler("civ_sim.log")
+    handler.setFormatter(
+        logging.Formatter(
+            fmt="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
+            datefmt="%Y-%m-%dT%H:%M:%S",
+        )
+    )
+    root = logging.getLogger()
+    root.setLevel(level)
+    root.addHandler(handler)
 
 
 def parse_args() -> argparse.Namespace:
@@ -118,11 +135,18 @@ def parse_args() -> argparse.Namespace:
         metavar="F",
         help="Enemy intel noise for council providers: 0.0=exact, 1.0=very inaccurate",
     )
+    p.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level (default: INFO)",
+    )
     return p.parse_args()
 
 
 def main():
     args = parse_args()
+    _configure_logging(args.log_level)
 
     cfg = SimConfig(
         rng_seed=args.seed,
@@ -143,7 +167,7 @@ def main():
     if args.config:
         import yaml
 
-        with open(args.config) as f:
+        with Path(args.config).open() as f:
             data = yaml.safe_load(f)
         cfg.civ_providers = [
             ProviderConfig(**entry) for entry in data.get("civ_providers", [])
@@ -159,10 +183,10 @@ def main():
             prompt_template=args.prompt_template,
         )
         if args.provider == "anthropic" and "llama" in args.model.lower():
-            print(
-                f"[warn] Using provider=anthropic with model={args.model!r} — "
-                f"this looks like a local model. Did you mean to use --provider openai_compatible?",
-                file=sys.stderr,
+            logger.warning(
+                "Using provider=anthropic with model=%r — "
+                "this looks like a local model. Did you mean to use --provider openai_compatible?",
+                args.model,
             )
         cfg.civ_providers = [provider_cfg] * cfg.num_civs
 
@@ -200,30 +224,26 @@ def main():
 
             renderer = TerminalRenderer(model)
             if not args.terminal_viz:
-                print(
-                    "[info] SSH session with local display detected — using terminal renderer",
-                    file=sys.stderr,
+                logger.info(
+                    "SSH session with local display detected — using terminal renderer"
                 )
         except Exception as e:
-            print(f"[warn] Terminal visualization failed: {e}", file=sys.stderr)
+            logger.warning("Terminal visualization failed: %s", e)
     elif cfg.visualize:
         try:
             from civ_sim.visualization.renderer import Renderer
 
             renderer = Renderer(model)
         except Exception as e:
-            print(
-                f"[warn] matplotlib display unavailable ({e}); falling back to terminal view",
-                file=sys.stderr,
+            logger.warning(
+                "matplotlib display unavailable (%s); falling back to terminal view", e
             )
             try:
                 from civ_sim.visualization.terminal_renderer import TerminalRenderer
 
                 renderer = TerminalRenderer(model)
             except Exception as e2:
-                print(
-                    f"[warn] Terminal visualization also failed: {e2}", file=sys.stderr
-                )
+                logger.warning("Terminal visualization also failed: %s", e2)
 
     print(
         f"Seed={cfg.rng_seed}  Grid={cfg.width}×{cfg.height}  "
