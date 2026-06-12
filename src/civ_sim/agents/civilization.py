@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     pass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
@@ -29,7 +32,7 @@ class CulturalTraits:
             risk_tolerance=clamp(self.risk_tolerance + rng.gauss(0, sigma)),
         )
 
-    def as_dict(self) -> dict:
+    def as_dict(self) -> dict[str, float]:
         return dataclasses.asdict(self)
 
 
@@ -80,6 +83,14 @@ class Civilization:
         self.total_military = sum(c.military for c in cities)
         self.city_count = len(cities)
         self.alive = self.total_pop > 0
+        logger.debug(
+            "Civ %s aggregates: pop=%d mil=%d cities=%d alive=%s",
+            self.name,
+            self.total_pop,
+            self.total_military,
+            self.city_count,
+            self.alive,
+        )
 
     def __repr__(self) -> str:
         return (

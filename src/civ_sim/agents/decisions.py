@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from civ_sim.agents.city import CityAgent
+
+logger = logging.getLogger(__name__)
 
 
 # Action names
@@ -122,8 +125,19 @@ def choose_action(agent: "CityAgent") -> str:
     scores = get_action_scores(agent)
     feasible = _feasible(agent, scores)
     if not feasible:
+        logger.debug(
+            "City %s: no feasible actions, defaulting to gather", agent.unique_id
+        )
         return GATHER
-    return max(feasible, key=lambda a: feasible[a])
+    chosen = max(feasible, key=lambda a: feasible[a])
+    logger.debug(
+        "City %s (civ %s): chose %s (score=%.3f)",
+        agent.unique_id,
+        agent.civ.name,
+        chosen,
+        feasible[chosen],
+    )
+    return chosen
 
 
 def _resource_modifier(action: str, agent: "CityAgent") -> float:
