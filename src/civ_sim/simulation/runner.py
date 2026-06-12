@@ -3,8 +3,9 @@ from __future__ import annotations
 import copy
 import importlib
 import json
-import os
+import logging
 import types
+from pathlib import Path
 
 try:
     ray: types.ModuleType | None = importlib.import_module("ray")
@@ -13,6 +14,8 @@ except ModuleNotFoundError:
 
 from civ_sim.config import SimConfig
 from civ_sim.simulation.model import CivModel
+
+logger = logging.getLogger(__name__)
 
 
 def run_single(config: SimConfig, renderer=None) -> dict:
@@ -68,7 +71,10 @@ def run_sweep(
     """
     import duckdb
 
-    assert ray is not None, "Ray is required for sweep runs: pip install ray"
+    if ray is None:
+        raise ImportError("Ray is required for sweep runs: pip install ray")
+
+    logger.info("Sweep starting: %d runs, output=%s", n_runs, output_db)
 
     effective_workers = num_workers or getattr(base_config, "num_sweep_workers", 0)
     ray.init(
@@ -82,10 +88,10 @@ def run_sweep(
     # fresh valid database file at that path.
     if (
         output_db != ":memory:"
-        and os.path.exists(output_db)
-        and os.path.getsize(output_db) == 0
+        and Path(output_db).exists()
+        and Path(output_db).stat().st_size == 0
     ):
-        os.unlink(output_db)
+        Path(output_db).unlink()
 
     con = duckdb.connect(output_db)
     con.execute("""
@@ -110,7 +116,7 @@ def run_sweep(
         done, remaining = ray.wait(remaining, num_returns=1, timeout=60.0)
         if not done:
             errors += 1
-            print("\n  [warn] worker timed out after 60 s; skipping")
+            logger.warning("Worker timed out after 60 s; skipping")
             remaining = remaining[1:]
             continue
         for ref in done:
@@ -137,7 +143,7 @@ def run_sweep(
                 )
             except Exception as exc:
                 errors += 1
-                print(f"\n  [warn] worker error: {exc}")
+                logger.warning("Worker error: %s", exc)
 
     con.close()
     ray.shutdown()

@@ -8,9 +8,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import logging
+import os
 import queue
 import sys
+import threading
 import time
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Pure helpers — no I/O
@@ -53,7 +58,7 @@ def _read_keys_raw(key_q: queue.Queue) -> None:
     import termios
     import tty
 
-    fd = sys.stdin.fileno()
+    fd = sys.stdin.fileno()  # noqa: F841  # used in try/finally
     old = termios.tcgetattr(fd)
     try:
         tty.setraw(fd)
@@ -96,6 +101,8 @@ def replay_terminal(reader, from_tick: int, speed: float) -> None:
 
     from civ_sim.visualization.terminal_renderer import TerminalRenderer
 
+    logger.info("Replaying terminal mode from_tick=%d", from_tick)
+
     ticks = reader.ticks()
     if not ticks:
         print("No snapshots found in this database.", file=sys.stderr)
@@ -119,7 +126,6 @@ def replay_terminal(reader, from_tick: int, speed: float) -> None:
     renderer = TerminalRenderer(frame)
 
     key_q: queue.Queue = queue.Queue()
-    import threading
 
     t = threading.Thread(target=_read_keys_raw, args=(key_q,), daemon=True)
     t.start()
@@ -177,6 +183,8 @@ def replay_matplotlib(reader, from_tick: int, speed: float) -> None:
     if not _MPL_AVAILABLE:
         print("matplotlib is not available. Use --renderer terminal.", file=sys.stderr)
         return
+
+    logger.info("Replaying matplotlib mode from_tick=%d", from_tick)
 
     ticks = reader.ticks()
     if not ticks:
@@ -258,14 +266,14 @@ def main() -> None:
     )
     args = p.parse_args()
 
+    logger.info("Replaying from %s tick=%d", args.db_path, args.from_tick)
+
     from civ_sim.storage.snapshot import SnapshotReader
 
     reader = SnapshotReader(args.db_path)
 
     renderer = args.renderer
     if renderer == "auto":
-        import os
-
         renderer = "matplotlib" if os.environ.get("DISPLAY") else "terminal"
 
     try:
