@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math
 from typing import TYPE_CHECKING
 
@@ -24,6 +25,8 @@ from civ_sim.world.resources import ResourceType
 if TYPE_CHECKING:
     from civ_sim.agents.civilization import Civilization
     from civ_sim.simulation.model import CivModel
+
+logger = logging.getLogger(__name__)
 
 
 class CityAgent(Grid2DMovingAgent):
@@ -55,6 +58,9 @@ class CityAgent(Grid2DMovingAgent):
 
         # Claim starting tile
         model.grid.claim(x, y, civ.civ_id)
+        logger.info(
+            "City %s founded by civ %s at (%d, %d)", self.unique_id, civ.name, x, y
+        )
 
     # ------------------------------------------------------------------
 
@@ -347,8 +353,23 @@ class CityAgent(Grid2DMovingAgent):
 
             if target.population < cfg.initial_pop * cfg.capture_threshold:
                 self._capture_city(target, damage_factor=damage_factor)
+            logger.debug(
+                "City %s (civ %s) WON attack on city %s (civ %s) at tick %d",
+                self.unique_id,
+                self.civ.name,
+                target.unique_id,
+                target.civ.name,
+                self.model.steps,
+            )
         else:
             self.military = max(0, self.military - int(self.military * 0.25))
+            logger.debug(
+                "City %s (civ %s) LOST attack on city %s at tick %d",
+                self.unique_id,
+                self.civ.name,
+                target.unique_id,
+                self.model.steps,
+            )
 
     def _capture_city(self, target: "CityAgent", damage_factor: float = 1.0) -> None:
         """Transfer a weakened enemy city to this civilization."""
@@ -369,6 +390,13 @@ class CityAgent(Grid2DMovingAgent):
         )
 
         enemy_civ_id = target.civ.civ_id
+        logger.info(
+            "City %s captured: civ %s → civ %s at tick %d",
+            target.unique_id,
+            target.civ.name,
+            self.civ.name,
+            self.model.steps,
+        )
         target.civ = self.civ
         self.model.grid.claim(target.x, target.y, self.civ.civ_id)
         self.model.logger.log_event(
@@ -424,6 +452,14 @@ class CityAgent(Grid2DMovingAgent):
                     self.model.grid.consume(
                         nx, ny, ResourceType.FOOD, current * cfg.settle_land_drain
                     )
+        logger.info(
+            "Civ %s settled new city %s at (%d, %d) tick %d",
+            self.civ.name,
+            new_city.unique_id,
+            pos[0],
+            pos[1],
+            self.model.steps,
+        )
         self.model.logger.log_event(
             tick=self.model.steps,
             agent_id=str(new_city.unique_id),
@@ -556,6 +592,12 @@ class CityAgent(Grid2DMovingAgent):
         self._shift_labor_ratio("woodcutter", cfg.labor_ratio_delta)
 
     def _collapse(self) -> None:
+        logger.warning(
+            "City %s (civ %s) collapsed at tick %d",
+            self.unique_id,
+            self.civ.name,
+            self.model.steps,
+        )
         self.model.grid.ownership[self.x, self.y] = -1  # release home tile only
         self.model.logger.log_event(
             tick=self.model.steps,
