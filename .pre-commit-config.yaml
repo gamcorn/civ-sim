@@ -1,5 +1,5 @@
 default_language_version:
-  python: python3.12
+  python: python3.14
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -12,7 +12,6 @@ repos:
     -   id: check-yaml
         exclude: ^\.gitlab-ci\.yml$
     -   id: debug-statements
-    -   id: requirements-txt-fixer
 -   repo: https://github.com/PyCQA/autoflake
     rev: v2.3.3
     hooks:
@@ -44,7 +43,7 @@ repos:
         entry: ty
         args: ["check", "--python", ".venv", "src/"]
         language: python
-        language_version: python3.12
+        language_version: python3.14
         additional_dependencies: ["ty"]
         pass_filenames: false
         require_serial: true

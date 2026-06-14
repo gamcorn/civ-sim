@@ -33,7 +33,7 @@ echo ""
 echo "[1/5] Checking Python virtual environment..."
 if [[ ! -f "$VENV/bin/python" ]]; then
   echo "ERROR: .venv not found at $VENV"
-  echo "Create it with: python3.12 -m venv .venv && .venv/bin/pip install -e ."
+  echo "Create it with: python3.14 -m venv .venv && .venv/bin/pip install -e ."
   exit 1
 fi
 echo "  OK: $("$VENV/bin/python" --version)"

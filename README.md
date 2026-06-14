@@ -23,20 +23,14 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Install all dependencies (recommended):
-
-```bash
-pip install -r requirements.txt
-```
-
-Or install only what you need using the optional dependency groups:
+Install only what you need using the optional dependency groups:
 
 ```bash
 pip install -e .               # core only (no visualization, no Ray sweep)
 pip install -e ".[viz]"        # + matplotlib live map
 pip install -e ".[sweep]"      # + Ray for parameter sweeps
 pip install -e ".[dev]"        # + pytest for development
-pip install -e ".[all]"        # everything
+pip install -e ".[all]"        # everything (recommended)
 ```
 
 Verify the install:
