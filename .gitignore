@@ -23,6 +23,13 @@ ENV/
 htmlcov/
 coverage.xml
 
+# Secrets / local config
+.env
+.env.*
+
+# Logs
+*.log
+
 # Data & results
 *.duckdb
 *.db
