@@ -97,7 +97,11 @@ class ResourceGrid:
         raw = opensimplex.noise2array(xs, ys).T
         return ((raw + 1.0) / 2.0 * self.config.resource_max).astype(np.float32)
 
-    def step(self, food_regen_mult: float = 1.0):
+    def step(
+        self,
+        food_regen_mult: float = 1.0,
+        recycling_civ_ids: set[int] | None = None,
+    ):
         regen_map = {
             ResourceType.FOOD: self.config.food_regen * food_regen_mult,
             ResourceType.WATER: self.config.water_regen,
@@ -108,6 +112,16 @@ class ResourceGrid:
             if rate > 0:
                 d = self.layers[rt].data
                 d += rate * self.config.resource_max
+                self.xp.clip(d, 0, self.config.resource_max, out=d)
+
+        # Mineral recycling: civs that discovered the tech slowly reclaim
+        # minerals from their own territory; the rest of the map stays finite.
+        if recycling_civ_ids:
+            rate = self.config.mineral_recycling_regen
+            if rate > 0:
+                d = self.layers[ResourceType.MINERALS].data
+                mask = self.xp.isin(self.ownership, list(recycling_civ_ids))
+                d[mask] += rate * self.config.resource_max
                 self.xp.clip(d, 0, self.config.resource_max, out=d)
 
     def consume(self, x: int, y: int, rt: ResourceType, amount: float) -> float:

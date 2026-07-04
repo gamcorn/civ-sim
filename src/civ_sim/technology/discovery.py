@@ -27,6 +27,7 @@ TECH_TREE: dict[str, dict] = {
     "mathematics": {"tech:writing": True},
     "steam_power": {"tech:iron_working": True, ResourceType.WOOD: 80.0},
     "industrialism": {"tech:steam_power": True, ResourceType.MINERALS: 90.0},
+    "recycling": {"tech:industrialism": True, "tech:mining": True},
 }
 
 # Science-point cost per technology (accumulated via _do_research)
@@ -44,6 +45,7 @@ TECH_COSTS: dict[str, float] = {
     "mathematics": 180.0,
     "steam_power": 250.0,
     "industrialism": 400.0,
+    "recycling": 500.0,
 }
 
 # Multipliers applied to a city when a tech is first discovered

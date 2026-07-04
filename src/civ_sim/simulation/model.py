@@ -104,7 +104,14 @@ class CivModel(mesa.Model):
             food_regen_mult = 1.0
 
         # 1. Resource regeneration (with optional climate dampening)
-        self.grid.step(food_regen_mult=food_regen_mult)
+        recycling_civ_ids = {
+            civ.civ_id
+            for civ in self.civilizations
+            if "recycling" in civ.discovered_techs
+        }
+        self.grid.step(
+            food_regen_mult=food_regen_mult, recycling_civ_ids=recycling_civ_ids
+        )
 
         # 2. Border pressure — contested tiles revert to unclaimed
         self._apply_border_reversion()

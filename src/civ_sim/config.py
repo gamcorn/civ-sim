@@ -40,8 +40,9 @@ class SimConfig:
     # Resource regeneration per tick (fraction of max)
     food_regen: float = 0.04
     water_regen: float = 0.015
-    wood_regen: float = 0.01
-    mineral_regen: float = 0.005  # slow renewal keeps research viable
+    wood_regen: float = 0.001  # forests regrow slowly; well below harvest draw
+    mineral_regen: float = 0.0  # mines don't naturally replenish — finite resource
+    mineral_recycling_regen: float = 0.0015  # unlocked by "recycling" tech
     resource_max: float = 100.0
     # Population
     initial_pop: int = 50

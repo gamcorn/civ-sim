@@ -130,9 +130,11 @@ def test_model_computes_climate_penalty_multiplier(mini_model):
     captured_mult = []
     original_step = mini_model.grid.step
 
-    def capturing_step(food_regen_mult=1.0):
+    def capturing_step(food_regen_mult=1.0, recycling_civ_ids=None):
         captured_mult.append(food_regen_mult)
-        return original_step(food_regen_mult=food_regen_mult)
+        return original_step(
+            food_regen_mult=food_regen_mult, recycling_civ_ids=recycling_civ_ids
+        )
 
     with patch.object(mini_model.grid, "step", side_effect=capturing_step):
         mini_model.step()
