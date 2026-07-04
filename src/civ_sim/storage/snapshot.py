@@ -242,7 +242,7 @@ class SnapshotReader:
                 GROUP BY tick
                 ORDER BY tick
             """).fetchall()
-        except (duckdb.CatalogException, duckdb.BinderException):
+        except duckdb.CatalogException, duckdb.BinderException:
             return empty
         h: dict = {"tick": [], "pop_0": [], "pop_1": [], "mil_0": [], "mil_1": []}
         for r in rows:

@@ -350,7 +350,7 @@ class CouncilProvider(DecisionProvider):
                     try:
                         merged[action] = merged.get(action, 0.0) + float(w)
                         count += 1
-                    except (TypeError, ValueError):
+                    except TypeError, ValueError:
                         pass
         if not merged:
             return None
